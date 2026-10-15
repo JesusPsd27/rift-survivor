@@ -1,0 +1,45 @@
+window.RS = window.RS || {};
+
+/** Kits simplificados — placeholders hasta assets reales. */
+RS.CHAMPIONS = [
+  {
+    id: "ashe",
+    name: "Ashe",
+    color: "#4aa3ff",
+    blurb: "Disparo a distancia al enemigo más cercano",
+    hp: 100,
+    speed: 210,
+    damage: 12,
+    cooldown: 0.55,
+    attack: "ranged",
+    projectileSpeed: 520,
+    projectileRadius: 5,
+    range: 420,
+  },
+  {
+    id: "garen",
+    name: "Garen",
+    color: "#3d9a6a",
+    blurb: "Aura / spin melee a tu alrededor",
+    hp: 140,
+    speed: 200,
+    damage: 8,
+    cooldown: 0.35,
+    attack: "aura",
+    auraRadius: 70,
+  },
+  {
+    id: "lux",
+    name: "Lux",
+    color: "#c8aa6e",
+    blurb: "Ráfaga en la dirección de movimiento",
+    hp: 90,
+    speed: 220,
+    damage: 22,
+    cooldown: 0.9,
+    attack: "beam",
+    projectileSpeed: 640,
+    projectileRadius: 7,
+    range: 480,
+  },
+];

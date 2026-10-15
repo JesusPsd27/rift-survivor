@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rift Survivor</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="app">
+    <canvas id="game" width="1280" height="720"></canvas>
+
+    <div id="overlay" class="overlay">
+      <div id="screen-menu" class="panel">
+        <h1>Rift Survivor</h1>
+        <p class="sub">Fan project · offline · placeholders</p>
+        <p class="hint">Elige campeón</p>
+        <div id="champion-list" class="champ-grid"></div>
+        <button id="btn-start" class="btn primary" disabled>Jugar</button>
+        <p id="best-stats" class="muted"></p>
+      </div>
+
+      <div id="screen-levelup" class="panel hidden">
+        <h2>Level up</h2>
+        <p class="hint">Elige una mejora</p>
+        <div id="upgrade-list" class="upgrade-list"></div>
+      </div>
+
+      <div id="screen-pause" class="panel hidden">
+        <h2>Pausa</h2>
+        <button id="btn-resume" class="btn primary">Continuar (Esc)</button>
+        <button id="btn-quit" class="btn">Menú</button>
+      </div>
+
+      <div id="screen-over" class="panel hidden">
+        <h2 id="over-title">Derrota</h2>
+        <p id="over-stats"></p>
+        <button id="btn-again" class="btn primary">Otra run</button>
+        <button id="btn-menu" class="btn">Menú</button>
+      </div>
+    </div>
+
+    <div id="hud" class="hud hidden">
+      <div class="hud-row">
+        <span id="hud-name"></span>
+        <span id="hud-level"></span>
+        <span id="hud-time"></span>
+        <span id="hud-kills"></span>
+      </div>
+      <div class="bar"><div id="hp-fill" class="fill hp"></div></div>
+      <div class="bar thin"><div id="xp-fill" class="fill xp"></div></div>
+    </div>
+  </div>
+
+  <script src="js/core/util.js"></script>
+  <script src="js/core/input.js"></script>
+  <script src="js/core/camera.js"></script>
+  <script src="js/core/save.js"></script>
+  <script src="js/data/champions.js"></script>
+  <script src="js/data/enemies.js"></script>
+  <script src="js/data/upgrades.js"></script>
+  <script src="js/entities/player.js"></script>
+  <script src="js/entities/enemy.js"></script>
+  <script src="js/entities/projectile.js"></script>
+  <script src="js/entities/pickup.js"></script>
+  <script src="js/systems/combat.js"></script>
+  <script src="js/systems/spawner.js"></script>
+  <script src="js/systems/levelup.js"></script>
+  <script src="js/ui/ui.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>
