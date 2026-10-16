@@ -72,8 +72,8 @@ RS.Spawner = {
     const brute = RS.ENEMY_TYPES.find((t) => t.id === "brute");
     const boss = RS.createEnemy(brute, p.x + 320, p.y, 4);
     boss.color = "#c8aa6e";
-    boss.radius = 34;
-    boss.xp = 40;
+    boss.radius = 48;
+    boss.xp = 2;
     state.enemies.push(boss);
   },
 };

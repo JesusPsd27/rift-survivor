@@ -14,22 +14,77 @@
       <div id="screen-menu" class="panel">
         <h1>Rift Survivor</h1>
         <p class="sub">Fan project · offline · placeholders</p>
-        <p class="hint">Elige campeón</p>
-        <div id="champion-list" class="champ-grid"></div>
-        <button id="btn-start" class="btn primary" disabled>Jugar</button>
+        <p id="menu-gold" class="menu-gold">Oro: 0</p>
+        <div class="menu-actions">
+          <button id="btn-play" class="btn primary">Jugar</button>
+          <button id="btn-meta" class="btn">Mejoras</button>
+        </div>
         <p id="best-stats" class="muted"></p>
       </div>
 
+      <div id="screen-select" class="panel panel-select hidden">
+        <h2>Elegir campeón</h2>
+        <div class="select-layout">
+          <div id="champion-list" class="champ-grid"></div>
+          <div class="champ-preview">
+            <div id="preview-swatch" class="preview-swatch"></div>
+            <strong id="preview-name">—</strong>
+            <p id="preview-blurb" class="muted">Selecciona un campeón</p>
+            <div id="preview-stats" class="preview-stats"></div>
+            <div id="preview-weapon" class="preview-weapon"></div>
+          </div>
+        </div>
+        <div class="menu-actions">
+          <button id="btn-start" class="btn primary" disabled>Empezar</button>
+          <button id="btn-select-back" class="btn">Volver</button>
+        </div>
+      </div>
+
+      <div id="screen-meta" class="panel panel-meta hidden">
+        <div class="meta-top">
+          <h2>Mejoras permanentes</h2>
+          <span id="meta-gold" class="menu-gold">Oro: 0</span>
+        </div>
+        <p class="hint">Gasta oro ganado en tus runs. Se aplican a todas las partidas.</p>
+        <button id="btn-meta-refund" class="btn btn-refund">Reembolsar mejoras</button>
+        <div id="meta-grid" class="meta-grid"></div>
+        <div class="meta-detail">
+          <div class="meta-detail-main">
+            <strong id="meta-detail-name">—</strong>
+            <p id="meta-detail-desc" class="muted">Elige un stat</p>
+          </div>
+          <div class="meta-detail-side">
+            <span id="meta-detail-cost" class="meta-cost"></span>
+            <button id="btn-meta-buy" class="btn primary" disabled>Comprar</button>
+          </div>
+        </div>
+        <button id="btn-meta-back" class="btn">Volver</button>
+      </div>
+
       <div id="screen-levelup" class="panel hidden">
-        <h2>Level up</h2>
+        <h2 id="levelup-title">¡Nivel 2!</h2>
         <p class="hint">Elige una mejora</p>
         <div id="upgrade-list" class="upgrade-list"></div>
       </div>
 
-      <div id="screen-pause" class="panel hidden">
+      <div id="screen-pause" class="panel panel-pause hidden">
         <h2>Pausa</h2>
-        <button id="btn-resume" class="btn primary">Continuar (Esc)</button>
-        <button id="btn-quit" class="btn">Menú</button>
+        <div class="pause-columns">
+          <div class="pause-col">
+            <div class="pause-col-title">Stats</div>
+            <div id="pause-stats-base" class="pause-stats"></div>
+          </div>
+          <div class="pause-col">
+            <div class="pause-col-title">Armas</div>
+            <div id="pause-stats-weapons" class="pause-stats"></div>
+            <div class="pause-col-title pause-col-title-spaced">Mejoras</div>
+            <div id="pause-stats-mejoras" class="pause-stats"></div>
+          </div>
+        </div>
+        <div class="pause-actions">
+          <button id="btn-resume" class="btn primary">Continuar (Esc)</button>
+          <button id="btn-quit" class="btn">Menú</button>
+        </div>
       </div>
 
       <div id="screen-over" class="panel hidden">
@@ -40,6 +95,11 @@
       </div>
     </div>
 
+    <div id="loadout" class="loadout hidden">
+      <div id="loadout-weapons" class="loadout-row"></div>
+      <div id="loadout-passives" class="loadout-row"></div>
+    </div>
+
     <div id="hud" class="hud hidden">
       <div class="hud-row">
         <span id="hud-name"></span>
@@ -47,8 +107,20 @@
         <span id="hud-time"></span>
         <span id="hud-kills"></span>
       </div>
-      <div class="bar"><div id="hp-fill" class="fill hp"></div></div>
-      <div class="bar thin"><div id="xp-fill" class="fill xp"></div></div>
+      <div class="bar-wrap">
+        <span class="bar-label">HP</span>
+        <div class="bar">
+          <div id="hp-fill" class="fill hp"></div>
+          <span id="hp-text" class="bar-text">0/0</span>
+        </div>
+      </div>
+      <div class="bar-wrap">
+        <span class="bar-label">XP</span>
+        <div class="bar thin">
+          <div id="xp-fill" class="fill xp"></div>
+          <span id="xp-text" class="bar-text">0/0</span>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -56,16 +128,22 @@
   <script src="js/core/input.js"></script>
   <script src="js/core/camera.js"></script>
   <script src="js/core/save.js"></script>
+  <script src="js/data/weapons.js"></script>
   <script src="js/data/champions.js"></script>
   <script src="js/data/enemies.js"></script>
   <script src="js/data/upgrades.js"></script>
+  <script src="js/data/meta.js"></script>
+  <script src="js/data/evolutions.js"></script>
+  <script src="js/systems/weapons.js"></script>
   <script src="js/entities/player.js"></script>
   <script src="js/entities/enemy.js"></script>
   <script src="js/entities/projectile.js"></script>
   <script src="js/entities/pickup.js"></script>
+  <script src="js/entities/floater.js"></script>
   <script src="js/systems/combat.js"></script>
   <script src="js/systems/spawner.js"></script>
   <script src="js/systems/levelup.js"></script>
+  <script src="js/debug.js"></script>
   <script src="js/ui/ui.js"></script>
   <script src="js/game.js"></script>
 </body>

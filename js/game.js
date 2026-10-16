@@ -22,6 +22,7 @@ RS.Game = {
     this.state = null;
     RS.UI.show("menu");
     RS.UI.refreshBest();
+    RS.UI.refreshGold();
   },
 
   startRun(championId) {
@@ -33,6 +34,8 @@ RS.Game = {
       enemies: [],
       projectiles: [],
       pickups: [],
+      floaters: [],
+      slashes: [],
       time: 0,
       kills: 0,
       pendingLevelUps: 0,
@@ -51,7 +54,7 @@ RS.Game = {
   pause() {
     if (this.mode !== "play") return;
     this.mode = "pause";
-    RS.UI.show("pause");
+    RS.UI.showPause(this.state);
   },
 
   resume() {
@@ -62,9 +65,16 @@ RS.Game = {
   },
 
   beginLevelUp() {
+    const choices = RS.LevelUp.choices(this.state.player, 3);
+    if (!choices.length) {
+      this.state.pendingLevelUps = 0;
+      this.mode = "play";
+      RS.UI.show(null);
+      this.last = RS.now();
+      return;
+    }
     this.mode = "levelup";
-    const choices = RS.LevelUp.choices(3);
-    RS.UI.showLevelUp(choices, (u) => {
+    RS.UI.showLevelUp(this.state.player.level, choices, (u) => {
       RS.LevelUp.apply(this.state, u);
       if (this.state.pendingLevelUps > 0) {
         this.beginLevelUp();
@@ -81,10 +91,14 @@ RS.Game = {
     this.state.won = won;
     const p = this.state.player;
     RS.Save.recordRun(this.state.kills, this.state.time, p.id);
+    const goldEarned = RS.Save.goldForRun(this.state.kills, this.state.time, won);
+    const goldTotal = RS.Save.addGold(goldEarned);
     RS.UI.showGameOver(won, {
       time: this.state.time,
       level: p.level,
       kills: this.state.kills,
+      goldEarned,
+      goldTotal,
     });
   },
 
@@ -111,10 +125,10 @@ RS.Game = {
     RS.updatePlayer(s.player, dt, s.world);
     RS.Camera.follow(s.player.x, s.player.y, dt);
     RS.Spawner.update(s, dt);
-    RS.Combat.tryAttack(s);
+    RS.updateWeapons(s, dt);
 
-    for (const e of s.enemies) RS.updateEnemy(e, dt, s.player);
-    for (const proj of s.projectiles) RS.updateProjectile(proj, dt);
+    for (const e of s.enemies) RS.updateEnemy(e, dt, s);
+    for (const proj of s.projectiles) RS.updateProjectile(proj, dt, s.player);
     for (const orb of s.pickups) RS.updatePickup(orb, dt, s.player);
 
     RS.Combat.resolveHits(s);
@@ -126,6 +140,8 @@ RS.Game = {
         orb.life = 0;
       }
     }
+
+    RS.updateFloaters(s, dt);
 
     s.enemies = s.enemies.filter((e) => e.hp > 0);
     s.projectiles = s.projectiles.filter((p) => p.life > 0);
@@ -165,7 +181,9 @@ RS.Game = {
     for (const orb of this.state.pickups) RS.drawPickup(ctx, orb);
     for (const e of this.state.enemies) RS.drawEnemy(ctx, e);
     for (const p of this.state.projectiles) RS.drawProjectile(ctx, p);
+    RS.drawSlashes(ctx, this.state);
     RS.drawPlayer(ctx, this.state.player);
+    RS.drawFloaters(ctx, this.state);
     RS.Camera.reset(ctx);
   },
 

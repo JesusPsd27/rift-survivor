@@ -1,10 +1,14 @@
 # Rift Survivor
 
-Fan game offline estilo *Vampire Survivors*, ambientado en el universo de League of Legends (no oficial).
+Fan game offline estilo *Vampire Survivors*, inspirado en arquetipos de MOBAs (no oficial).
 
 HTML + CSS + JavaScript vanilla + Canvas 2D. Sin build ni dependencias: clona el repo y abre `index.html`.
 
-> **Disclaimer:** League of Legends y todos los personajes asociados son propiedad de Riot Games. Este es un proyecto de fans sin ánimo de lucro, no afiliado a Riot.
+## Disclaimer
+
+**Rift Survivor** isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.
+
+This is a free, non-commercial fan project. League of Legends character names used as temporary placeholders in the MVP do not imply ownership or affiliation. The game does **not** redistribute official Riot art, audio, or client assets; visuals are geometric placeholders until original art is added.
 
 ## Jugar
 
@@ -19,15 +23,27 @@ HTML + CSS + JavaScript vanilla + Canvas 2D. Sin build ni dependencias: clona el
 
 Sobrevive **4 minutos** para ganar la run. El progreso de récords se guarda en `localStorage`.
 
-## Campeones (placeholders)
+## Campeones y armas (placeholders)
 
-| Campeón | Kit simplificado |
-|---------|------------------|
-| Ashe | Disparo a distancia al más cercano |
-| Garen | Aura / spin melee |
-| Lux | Ráfaga en la dirección de movimiento |
+Cada campeón empieza con un arma. Inventario: **4 armas** + **4 mejoras**, cada una hasta nivel **5**.
 
-Al subir de nivel eliges 1 de 3 mejoras (daño, cadencia, velocidad, HP, área, multishot, regen).
+Referencias temáticas (ítems LoL; sin assets oficiales). Tipos: proyectil, aura, orbe, orbital, melee. Evoluciones en `evolutions.js`.
+
+| ID | Nombre (ES) | Tipo | Evolución (mejora) |
+|----|-------------|------|--------------------|
+| `recurve_bow` | Arco Recurvo | proyectil | `kraken_slayer` (Cadencia) |
+| `bamis_cinder` | Ceniza de Bami | aura | `sunfire_aegis` (Vitalidad) |
+| `fiendish_codex` | Códice Diabólico | orbe | `horizon_focus` (Daño) |
+| `bf_sword` | Espadon | melee | `infinity_edge` (Daño) |
+| `aether_wisp` | Brizna de Éter | orbital | `shurelyas_battlesong` (Movilidad) |
+
+| Campeón | Arma inicial |
+|---------|----------------|
+| Ashe | Arco Recurvo |
+| Garen | Ceniza de Bami |
+| Ahri | Códice Diabólico |
+
+Al level-up: arma/mejora nueva, subir nivel, o evolución si aplica.
 
 ## Estructura
 
@@ -49,4 +65,4 @@ MVP funcional con formas geométricas. Assets, más campeones y pulido visual vi
 
 ## Licencia
 
-Código: pendiente (MIT previsto). Marcas y lore de LoL: Riot Games.
+Código: pendiente (MIT previsto). Cualquier licencia del código aplica solo al código y assets originales de este repo, no a marcas ni propiedad intelectual de Riot Games.
