@@ -44,11 +44,11 @@ RS.levelWeapon = (player, weaponId) => {
 /**
  * Bonos acumulados del arma (solo esa arma).
  * Proyectil / orbe:
- *   2 +1 proy | 3 +40% dmg | 4 +30% cadencia | 5 +1 proy, +30% dmg, +15% cadencia
+ *   2 +1 proy | 3 +40% dmg | 4 +30% Cooldown | 5 +1 proy, +30% dmg, +15% Cooldown
  * Aura:
- *   2 +40% área | 3 +40% dmg | 4 +40% cadencia | 5 +30% área, +30% dmg, +15% cadencia
+ *   2 +40% tamaño | 3 +40% dmg | 4 +40% Cooldown | 5 +30% tamaño, +30% dmg, +15% Cooldown
  * Melee:
- *   2 +20% dmg | 3 +1 triángulo | 4 +20% cadencia | 5 +20% dmg, +15% cadencia, +1 triángulo
+ *   2 +20% dmg | 3 +1 triángulo | 4 +20% Cooldown | 5 +20% dmg, +15% Cooldown, +1 triángulo
  * Orbital:
  *   2 +1 orb | 3 +20% dmg | 4 +1 orb, +10% giro | 5 +1 orb, +15% dmg, +10% giro
  */
@@ -57,7 +57,7 @@ RS.weaponLevelMods = (type, level) => {
   const mods = {
     damage: 0,
     cadence: 0,
-    area: 0,
+    size: 0,
     projectiles: 0,
     spin: 0,
     meleeWedges: 0,
@@ -76,11 +76,11 @@ RS.weaponLevelMods = (type, level) => {
   }
 
   if (type === "aura") {
-    if (L >= 2) mods.area += 0.4;
+    if (L >= 2) mods.size += 0.4;
     if (L >= 3) mods.damage += 0.4;
     if (L >= 4) mods.cadence += 0.4;
     if (L >= 5) {
-      mods.area += 0.3;
+      mods.size += 0.3;
       mods.damage += 0.3;
       mods.cadence += 0.15;
     }
@@ -123,26 +123,26 @@ RS.weaponLevelUpText = (type, toLevel) => {
   if (type === "projectile") {
     if (L === 2) return "+1 proyectil";
     if (L === 3) return "+40% daño de esta arma";
-    if (L === 4) return "+30% cadencia de esta arma";
-    if (L === 5) return "+1 proyectil · +30% daño · +15% cadencia";
+    if (L === 4) return "+30% Cooldown de esta arma";
+    if (L === 5) return "+1 proyectil · +30% daño · +15% Cooldown";
   }
   if (type === "orb") {
     if (L === 2) return "+1 hechizo";
     if (L === 3) return "+40% daño de esta arma";
-    if (L === 4) return "+30% cadencia de esta arma";
-    if (L === 5) return "+1 hechizo · +30% daño · +15% cadencia";
+    if (L === 4) return "+30% Cooldown de esta arma";
+    if (L === 5) return "+1 hechizo · +30% daño · +15% Cooldown";
   }
   if (type === "aura") {
-    if (L === 2) return "+40% área de esta arma";
+    if (L === 2) return "+40% tamaño de esta arma";
     if (L === 3) return "+40% daño de esta arma";
-    if (L === 4) return "+40% cadencia de esta arma";
-    if (L === 5) return "+30% área · +30% daño · +15% cadencia";
+    if (L === 4) return "+40% Cooldown de esta arma";
+    if (L === 5) return "+30% tamaño · +30% daño · +15% Cooldown";
   }
   if (type === "melee") {
     if (L === 2) return "+20% daño de esta arma";
     if (L === 3) return "+1 triángulo de tajo";
-    if (L === 4) return "+20% cadencia de esta arma";
-    if (L === 5) return "+20% daño · +15% cadencia · +1 triángulo de tajo";
+    if (L === 4) return "+20% Cooldown de esta arma";
+    if (L === 5) return "+20% daño · +15% Cooldown · +1 triángulo de tajo";
   }
   if (type === "orbital") {
     if (L === 2) return "+1 orbital";
@@ -160,31 +160,31 @@ RS.recalcWeapon = (player, inst) => {
   const mods = RS.weaponLevelMods(def.type, inst.level);
   const dmgMult = player.damageMult || 1;
   const cdMult = player.cooldownMult || 1;
-  const areaMult = player.areaMult || 1;
+  const sizeMult = player.sizeMult || 1;
 
   inst.damage = b.damage * (1 + mods.damage) * dmgMult;
   inst.cooldown = Math.max(0.12, b.cooldown * (1 - mods.cadence) * cdMult);
 
   if (def.type === "aura") {
-    inst.auraRadius = (b.auraRadius || 60) * (1 + mods.area) * areaMult;
+    inst.auraRadius = (b.auraRadius || 60) * (1 + mods.size) * sizeMult;
   } else if (def.type === "orbital") {
-    // área solo agranda la brizna; la distancia de órbita no cambia
+    // tamaño solo agranda la brizna; la distancia de órbita no cambia
     inst.orbitRadius = b.orbitRadius || 55;
     inst.orbitSpeed = (b.orbitSpeed || 2.8) * (1 + mods.spin);
-    inst.projectileRadius = (b.projectileRadius || 8) * (1 + mods.area) * areaMult;
+    inst.projectileRadius = (b.projectileRadius || 8) * (1 + mods.size) * sizeMult;
     inst.projectiles = (b.projectiles || 1) + mods.projectiles;
   } else if (def.type === "melee") {
     const wedges = 1 + (mods.meleeWedges || 0);
-    inst.range = (b.range || 70) * (1 + mods.area) * areaMult;
+    inst.range = (b.range || 70) * (1 + mods.size) * sizeMult;
     inst.meleeArc = Math.min(
       Math.PI * 1.5,
-      (b.meleeArc || 1.05) * wedges * (1 + mods.area * 0.15)
+      (b.meleeArc || 1.05) * wedges * (1 + mods.size * 0.15)
     );
   } else {
     // projectile + orb
-    inst.range = (b.range || 300) * areaMult;
+    inst.range = (b.range || 300) * sizeMult;
     inst.projectileSpeed = b.projectileSpeed || 500;
-    inst.projectileRadius = (b.projectileRadius || 5) * areaMult;
+    inst.projectileRadius = (b.projectileRadius || 5) * sizeMult;
     inst.projectiles = (b.projectiles || 1) + mods.projectiles;
   }
 };

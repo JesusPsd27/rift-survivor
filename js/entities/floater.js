@@ -22,7 +22,7 @@ RS.updateFloaters = (state, dt) => {
 
 RS.drawFloaters = (ctx, state) => {
   ctx.save();
-  ctx.font = "bold 14px Segoe UI, system-ui, sans-serif";
+  ctx.font = "bold 14px Cinzel, Times New Roman, serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   for (const f of state.floaters) {

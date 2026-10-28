@@ -31,7 +31,7 @@ RS.Combat = {
   hurtPlayer(state, amount) {
     const p = state.player;
     if (p.invuln > 0 || p.hp <= 0) return;
-    const taken = Math.max(1, Math.round(amount));
+    const taken = Math.max(1, Math.round(amount * (1 - (p.armor || 0))));
     p.hp -= taken;
     p.invuln = 0.55;
     RS.spawnFloater(state, p.x, p.y - p.radius, `-${taken}`, "#ff6b6b");
@@ -83,3 +83,12 @@ RS.Combat = {
     }
   },
 };
+
+(() => {
+  const state = {
+    floaters: [],
+    player: { hp: 40, maxHp: 40, invuln: 0, armor: 0.5, radius: 20, x: 0, y: 0 },
+  };
+  RS.Combat.hurtPlayer(state, 10);
+  console.assert(state.player.hp === 35, "armadura reduce el daño a la mitad");
+})();

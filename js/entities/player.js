@@ -23,9 +23,12 @@ RS.createPlayer = (champ, x, y) => {
     maxHp: champ.hp,
     speed: champ.speed,
     regen: 0,
+    armor: 0,
+    magnet: 90,
+    xpMult: 1,
     damageMult: 1,
     cooldownMult: 1,
-    areaMult: 1,
+    sizeMult: 1,
   };
 
   for (const wid of champ.startWeapons || []) {
@@ -47,9 +50,12 @@ RS.recalcPlayer = (p) => {
     0.35,
     (1 - rate("cooldown") * lv("cooldown")) * (1 - (m.cooldown || 0))
   );
-  p.areaMult = (1 + rate("area") * lv("area")) * (1 + (m.area || 0));
+  p.sizeMult = (1 + rate("size") * lv("size")) * (1 + (m.size || 0));
   p.speed = b.speed * (1 + rate("speed") * lv("speed")) * (1 + (m.speed || 0));
   p.regen = rate("regen") * lv("regen") + (m.regen || 0);
+  p.armor = rate("armor") * lv("armor") + (m.armor || 0);
+  p.magnet = 90 * (1 + rate("magnet") * lv("magnet")) * (1 + (m.magnet || 0));
+  p.xpMult = (1 + rate("xp") * lv("xp")) * (1 + (m.xp || 0));
 
   const newMax = b.maxHp + rate("hp") * lv("hp") + (m.hp || 0);
   if (newMax > p.maxHp) p.hp += newMax - p.maxHp;
@@ -90,39 +96,48 @@ RS.pauseStatColumns = (p) => {
   const base = [
     {
       icon: "hp",
-      color: "#3d9a6a",
       label: "Vitalidad",
       value: `${RS.formatStat(p.hp, 0)} / ${RS.formatStat(p.maxHp, 0)}`,
     },
     {
       icon: "regen",
-      color: "#4ade80",
       label: "Regeneración",
       value: `${RS.formatStat(p.regen)} /s`,
     },
     {
       icon: "speed",
-      color: "#34d399",
       label: "Movilidad",
       value: RS.formatStat(p.speed, 0),
     },
     {
       icon: "damage",
-      color: "#f87171",
       label: "Daño",
       value: `×${RS.formatStat(p.damageMult, 2)}`,
     },
     {
       icon: "cooldown",
-      color: "#60a5fa",
-      label: "Cadencia",
+      label: "Cooldown",
       value: `×${RS.formatStat(p.cooldownMult, 2)}`,
     },
     {
-      icon: "area",
-      color: "#a78bfa",
-      label: "Área",
-      value: `×${RS.formatStat(p.areaMult, 2)}`,
+      icon: "size",
+      label: "Tamaño",
+      value: `×${RS.formatStat(p.sizeMult, 2)}`,
+    },
+    {
+      icon: "armor",
+      label: "Armadura",
+      value: `${RS.formatStat(p.armor * 100)}%`,
+    },
+    {
+      icon: "magnet",
+      label: "Imán",
+      value: RS.formatStat(p.magnet, 0),
+    },
+    {
+      icon: "xp",
+      label: "Experiencia",
+      value: `×${RS.formatStat(p.xpMult, 2)}`,
     },
   ];
 
@@ -141,8 +156,7 @@ RS.pauseStatColumns = (p) => {
     const def = RS.upgradeById(pas.id);
     const accum = RS.passiveAccumText(pas.id, pas.level);
     mejoras.push({
-      icon: "mejora",
-      color: def?.color || "#64748b",
+      icon: pas.id,
       label: def?.name || pas.id,
       value: accum ? `Nv ${pas.level} · ${accum}` : `Nv ${pas.level}`,
     });
@@ -187,3 +201,27 @@ RS.drawPlayer = (ctx, p) => {
   ctx.lineWidth = 3;
   ctx.stroke();
 };
+
+(() => {
+  const prev = RS.getMetaBonuses;
+  const p = {
+    base: { maxHp: 100, speed: 200 },
+    passives: [
+      { id: "armor", level: 5 },
+      { id: "magnet", level: 5 },
+      { id: "xp", level: 5 },
+    ],
+    weapons: [],
+    hp: 100,
+    maxHp: 100,
+  };
+  RS.getMetaBonuses = () => ({ armor: 0.2, magnet: 0.4, xp: 0.15 });
+  try {
+    RS.recalcPlayer(p);
+  } finally {
+    RS.getMetaBonuses = prev;
+  }
+  console.assert(Math.abs(p.armor - 0.5) < 1e-6, "armadura 30%+20%");
+  console.assert(Math.abs(p.magnet - 252) < 1e-6, "iman al maximo");
+  console.assert(Math.abs(p.xpMult - 1.495) < 1e-6, "xp de run y meta");
+})();

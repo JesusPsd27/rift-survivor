@@ -76,7 +76,7 @@ RS.evolutionUpgradeText = (evo) => {
     parts.push(`+${pct(from.range, to.range)}% alcance`);
   }
   if ((to.auraRadius || 0) > (from.auraRadius || 0)) {
-    parts.push(`+${pct(from.auraRadius, to.auraRadius)}% área`);
+    parts.push(`+${pct(from.auraRadius, to.auraRadius)}% tamaño`);
   }
   if ((to.meleeArc || 0) > (from.meleeArc || 0)) {
     parts.push(`+${pct(from.meleeArc, to.meleeArc)}% arco`);

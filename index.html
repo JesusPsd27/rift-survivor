@@ -8,21 +8,55 @@
 </head>
 <body>
   <div id="app">
+    <div id="stage">
     <canvas id="game" width="1280" height="720"></canvas>
 
+    <div id="loadout" class="loadout hidden">
+      <div id="loadout-weapons" class="loadout-row"></div>
+      <div id="loadout-passives" class="loadout-row"></div>
+    </div>
+
+    <div id="hud" class="hud hidden">
+      <div class="hud-row">
+        <span id="hud-name"></span>
+        <span id="hud-level"></span>
+        <span id="hud-time"></span>
+        <span id="hud-kills"></span>
+      </div>
+      <div class="bar-wrap">
+        <span class="bar-label">HP</span>
+        <div class="bar">
+          <div id="hp-fill" class="fill hp"></div>
+          <span id="hp-text" class="bar-text">0/0</span>
+        </div>
+      </div>
+      <div class="bar-wrap">
+        <span class="bar-label">XP</span>
+        <div class="bar">
+          <div id="xp-fill" class="fill xp"></div>
+          <span id="xp-text" class="bar-text">0/0</span>
+        </div>
+      </div>
+    </div>
+    </div>
+
     <div id="overlay" class="overlay">
-      <div id="screen-menu" class="panel">
+      <div id="screen-menu" class="panel panel-wide">
+        <a class="github-link" href="https://github.com/JesusPsd27/rift-survivor" target="_blank" rel="noopener noreferrer" aria-label="GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82A7.68 7.68 0 0 1 8 4.77c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg></a>
         <h1>Rift Survivor</h1>
         <p class="sub">Fan project · offline · placeholders</p>
-        <p id="menu-gold" class="menu-gold">Oro: 0</p>
-        <div class="menu-actions">
+        <p id="menu-gold" class="menu-gold"><span class="gold-icon" aria-hidden="true"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.2" fill="#e6c15a" stroke="#8a6a28" stroke-width="1.2"/><circle cx="8" cy="8" r="4.1" fill="none" stroke="#8a6a28" stroke-width="0.8"/><path d="M8 4.4v7.2M6.1 6.1h2.5a1.15 1.15 0 0 1 0 2.3H6.5a1.15 1.15 0 0 0 0 2.3h2.7" fill="none" stroke="#6b5018" stroke-width="0.9" stroke-linecap="round"/></svg></span><span class="gold-amount">Oro: 0</span></p>
+        <div class="menu-stack">
           <button id="btn-play" class="btn primary">Jugar</button>
           <button id="btn-meta" class="btn">Mejoras</button>
+          <button id="btn-stats" class="btn">Estadísticas</button>
+          <button id="btn-settings" class="btn">Configuración</button>
+          <button id="btn-credits" class="btn">Créditos</button>
         </div>
         <p id="best-stats" class="muted"></p>
       </div>
 
-      <div id="screen-select" class="panel panel-select hidden">
+      <div id="screen-select" class="panel panel-wide panel-select hidden">
         <h2>Elegir campeón</h2>
         <div class="select-layout">
           <div id="champion-list" class="champ-grid"></div>
@@ -34,31 +68,104 @@
             <div id="preview-weapon" class="preview-weapon"></div>
           </div>
         </div>
-        <div class="menu-actions">
-          <button id="btn-start" class="btn primary" disabled>Empezar</button>
+        <div class="panel-footer">
           <button id="btn-select-back" class="btn">Volver</button>
+          <button id="btn-start" class="btn primary" disabled>Empezar</button>
         </div>
       </div>
 
-      <div id="screen-meta" class="panel panel-meta hidden">
+      <div id="screen-meta" class="panel panel-wide panel-meta hidden">
         <div class="meta-top">
           <h2>Mejoras permanentes</h2>
-          <span id="meta-gold" class="menu-gold">Oro: 0</span>
+          <span id="meta-gold" class="menu-gold"><span class="gold-icon" aria-hidden="true"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.2" fill="#e6c15a" stroke="#8a6a28" stroke-width="1.2"/><circle cx="8" cy="8" r="4.1" fill="none" stroke="#8a6a28" stroke-width="0.8"/><path d="M8 4.4v7.2M6.1 6.1h2.5a1.15 1.15 0 0 1 0 2.3H6.5a1.15 1.15 0 0 0 0 2.3h2.7" fill="none" stroke="#6b5018" stroke-width="0.9" stroke-linecap="round"/></svg></span><span class="gold-amount">Oro: 0</span></span>
         </div>
         <p class="hint">Gasta oro ganado en tus runs. Se aplican a todas las partidas.</p>
-        <button id="btn-meta-refund" class="btn btn-refund">Reembolsar mejoras</button>
         <div id="meta-grid" class="meta-grid"></div>
-        <div class="meta-detail">
-          <div class="meta-detail-main">
-            <strong id="meta-detail-name">—</strong>
-            <p id="meta-detail-desc" class="muted">Elige un stat</p>
+        <div class="panel-footer">
+          <button id="btn-meta-back" class="btn">Volver</button>
+          <button id="btn-meta-refund" class="btn">Reembolsar mejoras</button>
+        </div>
+      </div>
+
+      <div id="screen-stats" class="panel panel-wide panel-stats hidden">
+        <div class="stats-top">
+          <h2>Estadísticas</h2>
+          <label class="stats-filter">Campeón
+            <select id="stats-champion"></select>
+          </label>
+        </div>
+        <div id="stats-summary" class="stats-summary"></div>
+        <div class="stats-subhead">Mejores tiempos</div>
+        <div id="stats-times" class="stats-times"></div>
+        <div class="panel-footer">
+          <button id="btn-stats-back" class="btn">Volver</button>
+        </div>
+      </div>
+
+      <div id="screen-settings" class="panel hidden">
+        <h2>Configuración</h2>
+        <label class="setting">
+          <span>General <strong>100%</strong></span>
+          <input data-vol="master" type="range" min="0" max="100" step="1" value="100" />
+        </label>
+        <label class="setting">
+          <span>Música · Menú <strong>35%</strong></span>
+          <input data-vol="musicUi" type="range" min="0" max="100" step="1" value="35" />
+        </label>
+        <label class="setting">
+          <span>Música · Partida <strong>35%</strong></span>
+          <input data-vol="musicGame" type="range" min="0" max="100" step="1" value="35" />
+        </label>
+        <label class="setting">
+          <span>Efectos · Interfaz <strong>80%</strong></span>
+          <input data-vol="sfxUi" type="range" min="0" max="100" step="1" value="80" />
+        </label>
+        <label class="setting">
+          <span>Efectos · Juego <strong>80%</strong></span>
+          <input data-vol="sfxGame" type="range" min="0" max="100" step="1" value="80" />
+        </label>
+        <button id="btn-fullscreen" class="btn" type="button">Pantalla completa</button>
+        <button id="btn-settings-back" class="btn" type="button">Volver</button>
+      </div>
+
+      <div id="screen-credits" class="panel panel-wide panel-credits hidden">
+        <h2>Créditos</h2>
+        <div class="credits">
+          <div class="credits-main">
+            <div class="credits-side">
+              <section>
+                <h3>Música de la partida</h3>
+                <p class="credit-name">Montogoronto</p>
+                <p class="credit-meta">vía Pixabay · Pixabay Content License</p>
+              </section>
+              <section>
+                <h3>Música del menú</h3>
+                <p class="credit-name">alex-morgan</p>
+                <p class="credit-meta">vía Pixabay · Pixabay Content License</p>
+              </section>
+              <section>
+                <h3>Fuente</h3>
+                <p class="credit-name">NDISCOVER</p>
+                <p class="credit-meta">Cinzel · SIL Open Font License</p>
+              </section>
+            </div>
+            <section class="credits-sounds">
+              <h3>Sonidos del menú</h3>
+              <ul class="credit-names">
+                <li>juniorsoundays</li>
+                <li>Pogmog<span>Freesound Community</span></li>
+                <li>dpren<span>Freesound Community</span></li>
+                <li>abramovichalex<span>Freesound Community</span></li>
+              </ul>
+              <p class="credit-meta">vía Pixabay · Pixabay Content License</p>
+            </section>
           </div>
-          <div class="meta-detail-side">
-            <span id="meta-detail-cost" class="meta-cost"></span>
-            <button id="btn-meta-buy" class="btn primary" disabled>Comprar</button>
+          <div class="credits-legal">
+            <p><strong>Rift Survivor</strong> es un fan project no oficial. No está respaldado por Riot Games y no refleja sus opiniones.</p>
+            <p>Riot Games, League of Legends y los nombres de campeones usados como placeholder son marcas de Riot Games, Inc. Este juego no redistribuye arte, audio ni archivos oficiales de Riot.</p>
           </div>
         </div>
-        <button id="btn-meta-back" class="btn">Volver</button>
+        <button id="btn-credits-back" class="btn" type="button">Volver</button>
       </div>
 
       <div id="screen-levelup" class="panel hidden">
@@ -83,6 +190,7 @@
         </div>
         <div class="pause-actions">
           <button id="btn-resume" class="btn primary">Continuar (Esc)</button>
+          <button id="btn-pause-settings" class="btn">Configuración</button>
           <button id="btn-quit" class="btn">Menú</button>
         </div>
       </div>
@@ -94,37 +202,10 @@
         <button id="btn-menu" class="btn">Menú</button>
       </div>
     </div>
-
-    <div id="loadout" class="loadout hidden">
-      <div id="loadout-weapons" class="loadout-row"></div>
-      <div id="loadout-passives" class="loadout-row"></div>
-    </div>
-
-    <div id="hud" class="hud hidden">
-      <div class="hud-row">
-        <span id="hud-name"></span>
-        <span id="hud-level"></span>
-        <span id="hud-time"></span>
-        <span id="hud-kills"></span>
-      </div>
-      <div class="bar-wrap">
-        <span class="bar-label">HP</span>
-        <div class="bar">
-          <div id="hp-fill" class="fill hp"></div>
-          <span id="hp-text" class="bar-text">0/0</span>
-        </div>
-      </div>
-      <div class="bar-wrap">
-        <span class="bar-label">XP</span>
-        <div class="bar thin">
-          <div id="xp-fill" class="fill xp"></div>
-          <span id="xp-text" class="bar-text">0/0</span>
-        </div>
-      </div>
-    </div>
   </div>
 
   <script src="js/core/util.js"></script>
+  <script src="js/core/audio.js"></script>
   <script src="js/core/input.js"></script>
   <script src="js/core/camera.js"></script>
   <script src="js/core/save.js"></script>

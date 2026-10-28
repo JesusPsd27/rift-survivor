@@ -17,7 +17,7 @@ RS.META_UPGRADES = [
   },
   {
     id: "cooldown",
-    name: "Cadencia",
+    name: "Cooldown",
     desc: "-3% cooldown por rango (máx -15%)",
     color: "#60a5fa",
     maxRank: 5,
@@ -46,9 +46,9 @@ RS.META_UPGRADES = [
     baseCost: 110,
   },
   {
-    id: "area",
-    name: "Área",
-    desc: "+5% área por rango (máx +25%)",
+    id: "size",
+    name: "Tamaño",
+    desc: "+5% tamaño por rango (máx +25%)",
     color: "#a78bfa",
     maxRank: 5,
     perRank: 0.05,
@@ -65,6 +65,36 @@ RS.META_UPGRADES = [
     unit: "pct",
     baseCost: 100,
   },
+  {
+    id: "armor",
+    name: "Armadura",
+    desc: "+4% reducción por rango (máx +20%)",
+    color: "#94a3b8",
+    maxRank: 5,
+    perRank: 0.04,
+    unit: "pct",
+    baseCost: 110,
+  },
+  {
+    id: "magnet",
+    name: "Imán",
+    desc: "+8% radio de atracción por rango (máx +40%)",
+    color: "#22d3ee",
+    maxRank: 5,
+    perRank: 0.08,
+    unit: "pct",
+    baseCost: 100,
+  },
+  {
+    id: "xp",
+    name: "Experiencia",
+    desc: "+3% experiencia por rango (máx +15%)",
+    color: "#c084fc",
+    maxRank: 5,
+    perRank: 0.03,
+    unit: "pct",
+    baseCost: 100,
+  },
 ];
 
 RS.metaById = (id) => RS.META_UPGRADES.find((m) => m.id === id);
@@ -72,7 +102,17 @@ RS.metaById = (id) => RS.META_UPGRADES.find((m) => m.id === id);
 /** Bonos totales según rangos guardados. */
 RS.getMetaBonuses = () => {
   const ranks = RS.Save.load().meta || {};
-  const out = { damage: 0, cooldown: 0, speed: 0, hp: 0, area: 0, regen: 0 };
+  const out = {
+    damage: 0,
+    cooldown: 0,
+    speed: 0,
+    hp: 0,
+    size: 0,
+    regen: 0,
+    armor: 0,
+    magnet: 0,
+    xp: 0,
+  };
   for (const def of RS.META_UPGRADES) {
     const r = Math.min(def.maxRank, ranks[def.id] || 0);
     out[def.id] = def.perRank * r;

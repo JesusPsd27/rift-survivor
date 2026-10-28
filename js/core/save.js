@@ -10,6 +10,8 @@ RS.Save = {
       bestChampion: null,
       gold: 0,
       meta: {},
+      runs: [],
+      settings: { master: 1, musicUi: 0.35, musicGame: 0.35, sfxUi: 0.8, sfxGame: 0.8 },
     };
   },
 
@@ -18,7 +20,22 @@ RS.Save = {
       const raw = localStorage.getItem(this.KEY);
       if (!raw) return this.defaults();
       const parsed = JSON.parse(raw);
-      return { ...this.defaults(), ...parsed, meta: { ...(parsed.meta || {}) } };
+      const ps = parsed.settings || {};
+      const legacy = {};
+      if (ps.music != null) legacy.musicUi = legacy.musicGame = ps.music;
+      if (ps.sfx != null) legacy.sfxUi = legacy.sfxGame = ps.sfx;
+      const data = {
+        ...this.defaults(),
+        ...parsed,
+        meta: { ...(parsed.meta || {}) },
+        settings: { ...this.defaults().settings, ...legacy, ...ps },
+      };
+      delete data.settings.music;
+      delete data.settings.sfx;
+      if (!Array.isArray(data.runs)) data.runs = [];
+      if (data.meta.area != null && data.meta.size == null) data.meta.size = data.meta.area;
+      delete data.meta.area;
+      return data;
     } catch {
       return this.defaults();
     }
@@ -28,20 +45,60 @@ RS.Save = {
     localStorage.setItem(this.KEY, JSON.stringify(data));
   },
 
-  recordRun(kills, time, championId) {
+  recordRun(run) {
     const cur = this.load();
-    let changed = false;
-    if (kills > cur.bestKills) {
-      cur.bestKills = kills;
-      cur.bestChampion = championId;
-      changed = true;
+    const entry = {
+      kills: run.kills || 0,
+      time: run.time || 0,
+      championId: run.championId,
+      won: !!run.won,
+      level: run.level || 0,
+      gold: run.gold || 0,
+    };
+    cur.runs.push(entry);
+    // shortcut: solo las últimas 300; el top 5 sale de ahí
+    if (cur.runs.length > 300) cur.runs.splice(0, cur.runs.length - 300);
+    if (entry.kills > cur.bestKills) {
+      cur.bestKills = entry.kills;
+      cur.bestChampion = entry.championId;
     }
-    if (time > cur.bestTime) {
-      cur.bestTime = time;
-      changed = true;
-    }
-    if (changed) this.save(cur);
+    if (entry.time > cur.bestTime) cur.bestTime = entry.time;
+    this.save(cur);
     return cur;
+  },
+
+  summarize(runs, championId) {
+    const list = (runs || []).filter((r) => !championId || r.championId === championId);
+    let wins = 0;
+    let kills = 0;
+    let time = 0;
+    let gold = 0;
+    let bestKills = 0;
+    let bestLevel = 0;
+    let bestTime = 0;
+    for (const r of list) {
+      if (r.won) wins += 1;
+      kills += r.kills || 0;
+      time += r.time || 0;
+      gold += r.gold || 0;
+      if ((r.kills || 0) > bestKills) bestKills = r.kills;
+      if ((r.level || 0) > bestLevel) bestLevel = r.level;
+      if ((r.time || 0) > bestTime) bestTime = r.time;
+    }
+    const top = list.slice().sort((a, b) => (b.time || 0) - (a.time || 0)).slice(0, 5);
+    const n = list.length;
+    return {
+      runs: n,
+      wins,
+      losses: n - wins,
+      kills,
+      time,
+      gold,
+      bestKills,
+      bestLevel,
+      bestTime,
+      top,
+    };
   },
 
   /** Oro ganado al terminar: kills + bonus tiempo + victoria. */
@@ -70,6 +127,22 @@ RS.Save = {
     return { ok: true, rank: cur.meta[id], gold: cur.gold, cost };
   },
 
+  settings() {
+    const d = this.defaults().settings;
+    const s = this.load().settings || {};
+    const out = {};
+    for (const k in d) out[k] = Number.isFinite(Number(s[k])) ? RS.clamp(Number(s[k]), 0, 1) : d[k];
+    return out;
+  },
+
+  setSetting(key, value) {
+    if (!(key in this.defaults().settings)) return;
+    const cur = this.load();
+    cur.settings[key] = RS.clamp(Number(value) || 0, 0, 1);
+    this.save(cur);
+    if (RS.Audio) RS.Audio.apply();
+  },
+
   refundMeta() {
     const cur = this.load();
     const refund = RS.metaSpentTotal();
@@ -79,3 +152,17 @@ RS.Save = {
     return { gold: cur.gold, refund };
   },
 };
+
+(() => {
+  const s = RS.Save.summarize(
+    [
+      { kills: 3, time: 10, championId: "ashe", won: false, level: 2, gold: 1 },
+      { kills: 8, time: 40, championId: "garen", won: true, level: 5, gold: 4 },
+      { kills: 1, time: 50, championId: "ashe", won: true, level: 3, gold: 2 },
+    ],
+    "ashe",
+  );
+  if (s.runs !== 2 || s.wins !== 1 || s.losses !== 1 || s.kills !== 4 || s.top[0].time !== 50) {
+    throw new Error("RS.Save.summarize");
+  }
+})();

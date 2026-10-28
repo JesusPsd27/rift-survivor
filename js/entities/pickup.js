@@ -37,15 +37,37 @@ RS.spawnXpOrbs = (state, x, y, total) => {
 
 RS.updatePickup = (orb, dt, player) => {
   orb.life -= dt;
-  const d = RS.dist(orb.x, orb.y, player.x, player.y);
-  const magnet = 90;
-  if (d < magnet) {
-    const pull = RS.norm(player.x - orb.x, player.y - orb.y);
-    const strength = 280 * (1 - d / magnet);
-    orb.x += pull.x * strength * dt;
-    orb.y += pull.y * strength * dt;
-  }
+  if (RS.dist(orb.x, orb.y, player.x, player.y) < (player.magnet || 90)) orb.homing = true;
+  if (!orb.homing) return;
+  // Acelera hasta ir por delante del jugador; una vez enganchado no se suelta.
+  const cap = player.speed + 60;
+  orb.pull = Math.min(cap, (orb.pull || 80) + 700 * dt);
+  const pull = RS.norm(player.x - orb.x, player.y - orb.y);
+  orb.x += pull.x * orb.pull * dt;
+  orb.y += pull.y * orb.pull * dt;
 };
+
+(() => {
+  const far = RS.createXpOrb(0, 0, 1);
+  RS.updatePickup(far, 0.5, { x: 200, y: 0, speed: 220, radius: 20 });
+  console.assert(far.x === 0 && !far.homing, "xp fuera de rango no se mueve");
+
+  const wide = RS.createXpOrb(0, 0, 1);
+  RS.updatePickup(wide, 1 / 60, { x: 100, y: 0, speed: 200, radius: 20, magnet: 120 });
+  console.assert(wide.homing, "iman amplio engancha mas lejos");
+
+  const player = { x: 0, y: 0, speed: 360, radius: 20 };
+  const orb = RS.createXpOrb(-70, 0, 1);
+  let caught = false;
+  let overtook = false;
+  for (let i = 0; i < 8 * 60; i++) {
+    player.x += player.speed / 60;
+    RS.updatePickup(orb, 1 / 60, player);
+    if (i / 60 >= 0.5 && orb.pull > player.speed) overtook = true;
+    if (RS.dist(orb.x, orb.y, player.x, player.y) <= player.radius + orb.radius) caught = true;
+  }
+  console.assert(overtook && caught, "xp enganchado alcanza a un jugador que huye");
+})();
 
 RS.drawPickup = (ctx, orb) => {
   const r = orb.radius;

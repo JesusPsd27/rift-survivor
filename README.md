@@ -31,7 +31,7 @@ Referencias temáticas (ítems LoL; sin assets oficiales). Tipos: proyectil, aur
 
 | ID | Nombre (ES) | Tipo | Evolución (mejora) |
 |----|-------------|------|--------------------|
-| `recurve_bow` | Arco Recurvo | proyectil | `kraken_slayer` (Cadencia) |
+| `recurve_bow` | Arco Recurvo | proyectil | `kraken_slayer` (Cooldown) |
 | `bamis_cinder` | Ceniza de Bami | aura | `sunfire_aegis` (Vitalidad) |
 | `fiendish_codex` | Códice Diabólico | orbe | `horizon_focus` (Daño) |
 | `bf_sword` | Espadon | melee | `infinity_edge` (Daño) |

@@ -2,7 +2,6 @@ window.RS = window.RS || {};
 
 RS.UI = {
   selectedChampionId: null,
-  selectedMetaId: null,
 
   init(game) {
     this.game = game;
@@ -11,6 +10,7 @@ RS.UI = {
       menu: document.getElementById("screen-menu"),
       select: document.getElementById("screen-select"),
       meta: document.getElementById("screen-meta"),
+      stats: document.getElementById("screen-stats"),
       levelup: document.getElementById("screen-levelup"),
       levelupTitle: document.getElementById("levelup-title"),
       pause: document.getElementById("screen-pause"),
@@ -20,9 +20,6 @@ RS.UI = {
       metaGrid: document.getElementById("meta-grid"),
       menuGold: document.getElementById("menu-gold"),
       metaGold: document.getElementById("meta-gold"),
-      metaDetailName: document.getElementById("meta-detail-name"),
-      metaDetailDesc: document.getElementById("meta-detail-desc"),
-      metaDetailCost: document.getElementById("meta-detail-cost"),
       previewSwatch: document.getElementById("preview-swatch"),
       previewName: document.getElementById("preview-name"),
       previewBlurb: document.getElementById("preview-blurb"),
@@ -32,8 +29,21 @@ RS.UI = {
       btnStart: document.getElementById("btn-start"),
       btnSelectBack: document.getElementById("btn-select-back"),
       btnMeta: document.getElementById("btn-meta"),
+      btnStats: document.getElementById("btn-stats"),
+      btnStatsBack: document.getElementById("btn-stats-back"),
+      btnSettings: document.getElementById("btn-settings"),
+      btnCredits: document.getElementById("btn-credits"),
+      settings: document.getElementById("screen-settings"),
+      credits: document.getElementById("screen-credits"),
+      vols: [...document.querySelectorAll("#screen-settings input[data-vol]")],
+      btnPauseSettings: document.getElementById("btn-pause-settings"),
+      btnFullscreen: document.getElementById("btn-fullscreen"),
+      btnSettingsBack: document.getElementById("btn-settings-back"),
+      btnCreditsBack: document.getElementById("btn-credits-back"),
+      statsChampion: document.getElementById("stats-champion"),
+      statsSummary: document.getElementById("stats-summary"),
+      statsTimes: document.getElementById("stats-times"),
       btnMetaBack: document.getElementById("btn-meta-back"),
-      btnMetaBuy: document.getElementById("btn-meta-buy"),
       btnMetaRefund: document.getElementById("btn-meta-refund"),
       btnResume: document.getElementById("btn-resume"),
       btnQuit: document.getElementById("btn-quit"),
@@ -61,7 +71,14 @@ RS.UI = {
 
     this.refreshBest();
     this.refreshGold();
+    this._fillStatsFilter();
 
+    this.els.menu.addEventListener("click", (e) => {
+      if (e.target.closest(".menu-stack button")) RS.Audio.click();
+    });
+    this.els.overlay.addEventListener("click", (e) => {
+      if (e.target.closest("[id$='-back']")) RS.Audio.back();
+    });
     this.els.btnPlay.addEventListener("click", () => this.showSelect());
     this.els.btnStart.addEventListener("click", () => {
       if (!this.selectedChampionId) return;
@@ -69,15 +86,25 @@ RS.UI = {
     });
     this.els.btnSelectBack.addEventListener("click", () => this.show("menu"));
     this.els.btnMeta.addEventListener("click", () => this.showMeta());
+    this.els.btnStats.addEventListener("click", () => this.showStats());
+    this.els.btnStatsBack.addEventListener("click", () => this.show("menu"));
+    this.els.btnSettings.addEventListener("click", () => this.showSettings());
+    this.els.btnCredits.addEventListener("click", () => this.show("credits"));
+    this.els.btnSettingsBack.addEventListener("click", () => this.closeSettings());
+    this.els.btnPauseSettings.addEventListener("click", () => this.showSettings());
+    this.els.btnCreditsBack.addEventListener("click", () => this.show("menu"));
+    for (const input of this.els.vols) this._bindVolume(input);
+    this.els.btnFullscreen.addEventListener("click", () => this.toggleFullscreen());
+    document.addEventListener("fullscreenchange", () => this.syncFullscreen());
+    this.els.statsChampion.addEventListener("change", () => this.renderStats());
     this.els.btnMetaBack.addEventListener("click", () => {
       this.refreshGold();
       this.show("menu");
     });
-    this.els.btnMetaBuy.addEventListener("click", () => this.buySelectedMeta());
     this.els.btnMetaRefund.addEventListener("click", () => {
       RS.Save.refundMeta();
+      RS.Audio.refund();
       this.renderMetaGrid();
-      this.refreshMetaDetail();
       this.refreshGold();
     });
     this.els.btnResume.addEventListener("click", () => game.resume());
@@ -110,6 +137,7 @@ RS.UI = {
         <div><strong>${c.name}</strong><span>${c.blurb}</span></div>`;
       btn.addEventListener("click", () => {
         this.selectedChampionId = c.id;
+        RS.Audio.pick();
         this.renderChampions();
         this.refreshChampPreview();
         this.els.btnStart.disabled = false;
@@ -133,9 +161,12 @@ RS.UI = {
     const hp = c.hp + (m.hp || 0);
     const speed = Math.round(c.speed * (1 + (m.speed || 0)));
     const dmg = 1 + (m.damage || 0);
-    const area = 1 + (m.area || 0);
+    const size = 1 + (m.size || 0);
     const cd = Math.max(0.35, 1 - (m.cooldown || 0));
     const regen = m.regen || 0;
+    const armor = (m.armor || 0) * 100;
+    const magnet = Math.round(90 * (1 + (m.magnet || 0)));
+    const xp = 1 + (m.xp || 0);
 
     this.els.previewSwatch.style.background = c.color;
     this.els.previewName.textContent = c.name;
@@ -144,9 +175,12 @@ RS.UI = {
       <div class="preview-stat"><span>HP</span><strong>${RS.formatStat(hp, 0)}</strong></div>
       <div class="preview-stat"><span>Velocidad</span><strong>${speed}</strong></div>
       <div class="preview-stat"><span>Daño</span><strong>×${RS.formatStat(dmg, 2)}</strong></div>
-      <div class="preview-stat"><span>Cadencia</span><strong>×${RS.formatStat(cd, 2)}</strong></div>
-      <div class="preview-stat"><span>Área</span><strong>×${RS.formatStat(area, 2)}</strong></div>
-      <div class="preview-stat"><span>Regen</span><strong>${RS.formatStat(regen)}/s</strong></div>`;
+      <div class="preview-stat"><span>Cooldown</span><strong>×${RS.formatStat(cd, 2)}</strong></div>
+      <div class="preview-stat"><span>Tamaño</span><strong>×${RS.formatStat(size, 2)}</strong></div>
+      <div class="preview-stat"><span>Regen</span><strong>${RS.formatStat(regen)}/s</strong></div>
+      <div class="preview-stat"><span>Armadura</span><strong>${RS.formatStat(armor)}%</strong></div>
+      <div class="preview-stat"><span>Imán</span><strong>${magnet}</strong></div>
+      <div class="preview-stat"><span>Experiencia</span><strong>×${RS.formatStat(xp, 2)}</strong></div>`;
 
     const wid = c.startWeapons?.[0];
     const w = wid ? RS.weaponById(wid) : null;
@@ -177,18 +211,81 @@ RS.UI = {
   },
 
   refreshGold() {
-    const g = RS.Save.load().gold || 0;
-    const text = `Oro: ${g}`;
-    if (this.els.menuGold) this.els.menuGold.textContent = text;
-    if (this.els.metaGold) this.els.metaGold.textContent = text;
+    const text = `Oro: ${RS.Save.load().gold || 0}`;
+    for (const el of [this.els.menuGold, this.els.metaGold]) {
+      const amount = el?.querySelector(".gold-amount");
+      if (amount) amount.textContent = text;
+    }
+  },
+
+  _coinIcon() {
+    return `<svg class="gold-icon" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.2" fill="#e6c15a" stroke="#8a6a28" stroke-width="1.2"/><circle cx="8" cy="8" r="4.1" fill="none" stroke="#8a6a28" stroke-width="0.8"/><path d="M8 4.4v7.2M6.1 6.1h2.5a1.15 1.15 0 0 1 0 2.3H6.5a1.15 1.15 0 0 0 0 2.3h2.7" fill="none" stroke="#6b5018" stroke-width="0.9" stroke-linecap="round"/></svg>`;
   },
 
   showMeta() {
-    if (!this.selectedMetaId) this.selectedMetaId = RS.META_UPGRADES[0]?.id || null;
     this.renderMetaGrid();
-    this.refreshMetaDetail();
     this.refreshGold();
     this.show("meta");
+  },
+
+  _fillStatsFilter() {
+    const sel = this.els.statsChampion;
+    const all = document.createElement("option");
+    all.value = "";
+    all.textContent = "Todos";
+    sel.appendChild(all);
+    for (const c of RS.CHAMPIONS) {
+      const opt = document.createElement("option");
+      opt.value = c.id;
+      opt.textContent = c.name;
+      sel.appendChild(opt);
+    }
+  },
+
+  _champName(id) {
+    return RS.CHAMPIONS.find((c) => c.id === id)?.name || id || "—";
+  },
+
+  showStats() {
+    this.renderStats();
+    this.show("stats");
+  },
+
+  renderStats() {
+    const id = this.els.statsChampion.value || null;
+    const s = RS.Save.summarize(RS.Save.load().runs, id);
+    const winRate = s.runs ? Math.round((s.wins / s.runs) * 100) : 0;
+    const cells = [
+      ["Partidas", s.runs],
+      ["Victorias", s.wins],
+      ["Derrotas", s.losses],
+      ["% victoria", `${winRate}%`],
+      ["Kills", s.kills],
+      ["Tiempo jugado", RS.formatTime(s.time)],
+      ["Mejor tiempo", RS.formatTime(s.bestTime)],
+      ["Mejor kills", s.bestKills],
+      ["Nivel máximo", s.bestLevel],
+      ["Oro ganado", s.gold],
+    ];
+    this.els.statsSummary.innerHTML = cells
+      .map(([label, value]) => `<div class="stats-cell"><span>${label}</span><strong>${value}</strong></div>`)
+      .join("");
+
+    if (!s.top.length) {
+      this.els.statsTimes.innerHTML = `<div class="stats-empty">Sin partidas todavía</div>`;
+      return;
+    }
+    this.els.statsTimes.innerHTML = s.top
+      .map((r, i) => {
+        const result = r.won ? "Victoria" : "Derrota";
+        return `<div class="stats-time">
+          <span class="rank">${i + 1}</span>
+          <span>${this._champName(r.championId)}</span>
+          <span class="when">${RS.formatTime(r.time)}</span>
+          <span>${r.kills} kills · ${result}</span>
+        </div>`;
+      })
+      .join("");
   },
 
   renderMetaGrid() {
@@ -198,65 +295,97 @@ RS.UI = {
       const rank = RS.metaRank(def.id);
       const maxed = rank >= def.maxRank;
       const cost = RS.metaNextCost(def.id);
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "meta-card";
-      if (this.selectedMetaId === def.id) btn.classList.add("selected");
-      if (maxed) btn.classList.add("maxed");
-      else if (gold < cost) btn.classList.add("locked");
+      const card = document.createElement("div");
+      card.className = "meta-card";
+      if (maxed) card.classList.add("maxed");
+      else if (gold < cost) card.classList.add("locked");
 
       let pips = "";
       for (let i = 1; i <= def.maxRank; i++) {
         pips += `<span class="meta-pip${i <= rank ? " on" : ""}"></span>`;
       }
 
-      btn.innerHTML = `
+      const buyLabel = maxed ? "Máximo" : `Comprar ${def.name} por ${cost}`;
+      const buyInner = maxed
+        ? "Máx"
+        : `${this._coinIcon()}<span>${cost}</span>`;
+
+      card.innerHTML = `
         <span class="meta-card-name">${def.name}</span>
-        <div class="meta-card-icon" style="background:${def.color}">${this._glyph(def.id)}</div>
+        <span class="meta-card-gain">${this._gain(def)}</span>
+        <div class="meta-card-icon">${this._glyph(def.id)}</div>
         <div class="meta-pips">${pips}</div>
-        <span class="meta-card-rank">${rank}/${def.maxRank}</span>`;
-      btn.addEventListener("click", () => {
-        this.selectedMetaId = def.id;
-        this.renderMetaGrid();
-        this.refreshMetaDetail();
-      });
-      this.els.metaGrid.appendChild(btn);
+        <span class="meta-card-rank">${rank}/${def.maxRank}</span>
+        <button type="button" class="meta-buy" aria-label="${buyLabel}" ${maxed || gold < cost ? "disabled" : ""}>${buyInner}</button>`;
+
+      card.querySelector(".meta-buy").addEventListener("click", () => this.buyMeta(def.id));
+      this.els.metaGrid.appendChild(card);
     }
   },
 
-  refreshMetaDetail() {
-    const def = RS.metaById(this.selectedMetaId);
-    if (!def) {
-      this.els.metaDetailName.textContent = "—";
-      this.els.metaDetailDesc.textContent = "Elige un stat";
-      this.els.metaDetailCost.textContent = "";
-      this.els.btnMetaBuy.disabled = true;
-      return;
-    }
-    const rank = RS.metaRank(def.id);
-    const gold = RS.Save.load().gold || 0;
-    const cost = RS.metaNextCost(def.id);
-    const maxed = rank >= def.maxRank;
-    this.els.metaDetailName.textContent = def.name;
-    this.els.metaDetailDesc.textContent = def.desc;
-    if (maxed) {
-      this.els.metaDetailCost.textContent = "Máximo";
-      this.els.btnMetaBuy.disabled = true;
-      this.els.btnMetaBuy.textContent = "Máximo";
-    } else {
-      this.els.metaDetailCost.textContent = `Costo: ${cost}`;
-      this.els.btnMetaBuy.disabled = gold < cost;
-      this.els.btnMetaBuy.textContent = "Comprar";
-    }
+  _gain(def) {
+    const pct = Math.round(def.perRank * 100);
+    const text = {
+      damage: `+${pct}% daño`,
+      cooldown: `−${pct}% cooldown`,
+      hp: `+${def.perRank} HP`,
+      regen: `+${def.perRank} HP/s`,
+      size: `+${pct}% tamaño`,
+      speed: `+${pct}% velocidad`,
+      armor: `+${pct}% reducción`,
+      magnet: `+${pct}% imán`,
+      xp: `+${pct}% experiencia`,
+    };
+    return text[def.id] || def.desc;
   },
 
-  buySelectedMeta() {
-    if (!this.selectedMetaId) return;
-    const res = RS.Save.buyMeta(this.selectedMetaId);
+  buyMeta(id) {
+    const res = RS.Save.buyMeta(id);
     if (!res.ok) return;
+    RS.Audio.buy();
     this.renderMetaGrid();
-    this.refreshMetaDetail();
     this.refreshGold();
+  },
+
+  showSettings() {
+    this.syncSettings();
+    this.show("settings");
+  },
+
+  /** Vuelve a la pausa si se abrió desde una partida. */
+  closeSettings() {
+    this.show(this.game.mode === "pause" ? "pause" : "menu");
+  },
+
+  _bindVolume(input) {
+    input.addEventListener("input", () => {
+      const pct = Number(input.value);
+      input.closest(".setting").querySelector("strong").textContent = `${pct}%`;
+      RS.Save.setSetting(input.dataset.vol, pct / 100);
+    });
+  },
+
+  syncSettings() {
+    const s = RS.Save.settings();
+    for (const input of this.els.vols) {
+      const pct = Math.round(s[input.dataset.vol] * 100);
+      input.value = String(pct);
+      input.closest(".setting").querySelector("strong").textContent = `${pct}%`;
+    }
+    this.syncFullscreen();
+  },
+
+  syncFullscreen() {
+    this.els.btnFullscreen.textContent = document.fullscreenElement
+      ? "Salir de pantalla completa"
+      : "Pantalla completa";
+  },
+
+  toggleFullscreen() {
+    const p = document.fullscreenElement
+      ? document.exitFullscreen()
+      : document.documentElement.requestFullscreen();
+    p.catch(() => {});
   },
 
   show(screen) {
@@ -264,17 +393,40 @@ RS.UI = {
       menu: this.els.menu,
       select: this.els.select,
       meta: this.els.meta,
+      stats: this.els.stats,
+      settings: this.els.settings,
+      credits: this.els.credits,
       levelup: this.els.levelup,
       pause: this.els.pause,
       over: this.els.over,
     };
-    for (const el of Object.values(map)) el.classList.add("hidden");
-    if (screen && map[screen]) map[screen].classList.remove("hidden");
-    const hideHud =
-      screen === "menu" || screen === "select" || screen === "meta" || screen === "over";
+    const menuScreen =
+      screen === "menu" ||
+      screen === "select" ||
+      screen === "meta" ||
+      screen === "stats" ||
+      screen === "settings" ||
+      screen === "credits";
+    const prev = this._screen;
+    this._screen = screen;
+    for (const el of Object.values(map)) {
+      el.classList.add("hidden");
+      el.classList.remove("panel-in");
+    }
+    const next = screen && map[screen];
+    if (next) {
+      next.classList.remove("hidden");
+      if (prev && prev !== screen && menuScreen) {
+        void next.offsetWidth;
+        next.classList.add("panel-in");
+      }
+    }
+    const inRun = this.game.mode !== "menu";
+    const hideHud = screen === "over" || (menuScreen && !inRun);
     this.els.hud.classList.toggle("hidden", hideHud);
     this.els.loadout.classList.toggle("hidden", hideHud);
     this.els.overlay.style.pointerEvents = screen ? "auto" : "none";
+    if (RS.Audio) RS.Audio.setMenu(RS.Audio.hub(screen) && !inRun);
   },
 
   showLevelUp(playerLevel, choices, onPick) {
@@ -285,12 +437,16 @@ RS.UI = {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "upgrade-card";
+      const iconKind = u.kind === "mejora" || u.kind === "mejora_level" ? u.id : "weapon";
       btn.innerHTML = `
-        <div class="upgrade-head">
-          <strong>${u.name}</strong>
-          <span class="chip chip-${chip.tone}">${chip.text}</span>
-        </div>
-        <span class="upgrade-desc">${u.desc}</span>`;
+        <div class="upgrade-icon">${this._glyph(iconKind)}</div>
+        <div class="upgrade-body">
+          <div class="upgrade-head">
+            <strong>${u.name}</strong>
+            <span class="chip chip-${chip.tone}">${chip.text}</span>
+          </div>
+          <span class="upgrade-desc">${u.desc}</span>
+        </div>`;
       btn.addEventListener("click", () => onPick(u));
       this.els.upgradeList.appendChild(btn);
     }
@@ -303,24 +459,31 @@ RS.UI = {
   },
 
   _glyph(kind) {
-    // Placeholder hasta assets reales (arma / mejora / stats)
-    if (kind === "weapon") {
-      return `<svg class="loadout-glyph" viewBox="0 0 16 16" aria-hidden="true"><path fill="#fff" d="M8 1l1.2 4.2H14l-3.5 2.6L11.8 13 8 10.2 4.2 13l1.3-5.2L2 5.2h4.8z"/></svg>`;
-    }
-    if (kind === "mejora" || kind === "passive") {
-      return `<svg class="loadout-glyph" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.5" fill="none" stroke="#fff" stroke-width="1.6"/><circle cx="8" cy="8" r="2" fill="#fff"/></svg>`;
-    }
-    const paths = {
-      hp: `<path fill="#fff" d="M8 14S2 9.5 2 5.8C2 3.6 3.7 2 5.7 2c1.2 0 2.2.6 2.3 1.5C8.1 2.6 9.1 2 10.3 2 12.3 2 14 3.6 14 5.8 14 9.5 8 14 8 14z"/>`,
-      regen: `<path fill="#fff" d="M8 2v4l2.5-1.5L8 2zm0 12V10l-2.5 1.5L8 14zM2 8h4L4.5 5.5 2 8zm12 0h-4l1.5 2.5L14 8z"/>`,
-      speed: `<path fill="#fff" d="M3 11l5-9 1.2 4.2L15 8l-5 9-1.2-4.2z"/>`,
-      damage: `<path fill="#fff" d="M9.5 1.5L14 6l-7.5 7.5H2.5V9L9.5 1.5z"/>`,
-      cooldown: `<path fill="#fff" d="M8 2a6 6 0 100 12A6 6 0 008 2zm0 2v4.2l3 1.8-.8 1.2L7 9V4h1z"/>`,
-      area: `<path fill="none" stroke="#fff" stroke-width="1.5" d="M8 2.5a5.5 5.5 0 110 11 5.5 5.5 0 010-11z"/><circle cx="8" cy="8" r="1.5" fill="#fff"/>`,
-      default: `<circle cx="8" cy="8" r="3" fill="#fff"/>`,
+    const box = (inner, cls) =>
+      `<svg${cls ? ` class="${cls}"` : ""} viewBox="0 0 16 16" aria-hidden="true">${inner}</svg>`;
+    const mejora = box(
+      `<circle cx="8" cy="8" r="5.5" fill="none" stroke="#fff" stroke-width="1.6"/><circle cx="8" cy="8" r="2" fill="#fff"/>`,
+      "loadout-glyph",
+    );
+    const icons = {
+      weapon: box(
+        `<path fill="#fff" d="M8 1l1.2 4.2H14l-3.5 2.6L11.8 13 8 10.2 4.2 13l1.3-5.2L2 5.2h4.8z"/>`,
+        "loadout-glyph",
+      ),
+      mejora,
+      passive: mejora,
+      damage: `<img class="pixel" src="icons/damage.svg" alt="">`,
+      hp: `<img class="pixel" src="icons/hp.svg" alt="">`,
+      regen: `<img class="pixel" src="icons/regen.svg" alt="">`,
+      speed: `<img class="pixel" src="icons/speed.svg" alt="">`,
+      cooldown: `<img class="pixel" src="icons/cooldown.svg" alt="">`,
+      size: `<img class="pixel" src="icons/size.svg" alt="">`,
+      armor: `<img class="pixel" src="icons/armor.svg" alt="">`,
+      magnet: `<img class="pixel" src="icons/magnet.svg" alt="">`,
+      xp: `<img class="pixel" src="icons/xp.svg" alt="">`,
     };
-    const d = paths[kind] || paths.default;
-    return `<svg viewBox="0 0 16 16" aria-hidden="true">${d}</svg>`;
+    if (Object.prototype.hasOwnProperty.call(icons, kind)) return icons[kind];
+    return box(`<circle cx="8" cy="8" r="3" fill="#fff"/>`);
   },
 
   _pauseRowsHtml(rows) {
@@ -329,9 +492,10 @@ RS.UI = {
     }
     return rows
       .map((row) => {
-        const bg = row.color || "#334155";
+        const plain = row.icon === "weapon" ? "" : " plain";
+        const bg = plain ? "" : ` style="background:${row.color || "#334155"}"`;
         return `<div class="pause-stat">
-          <div class="pause-stat-icon" style="background:${bg}">${this._glyph(row.icon)}</div>
+          <div class="pause-stat-icon${plain}"${bg}>${this._glyph(row.icon)}</div>
           <span class="pause-stat-name">${row.label}</span>
           <span class="pause-stat-value">${row.value}</span>
         </div>`;
@@ -380,11 +544,11 @@ RS.UI = {
   },
 
   _loadoutSlot(color, level, kind, empty, title) {
-    const bg = empty ? "#1a2438" : color || "#64748b";
     const glyph = empty ? "" : this._glyph(kind);
     const tip = title ? ` title="${title}"` : "";
+    const bg = color ? ` style="background:${color}"` : "";
     return `<div class="loadout-slot${empty ? " empty" : ""}"${tip}>
-      <div class="loadout-icon" style="background:${bg}">${glyph}</div>
+      <div class="loadout-icon"${bg}>${glyph}</div>
       ${this._dots(empty ? 0 : level)}
     </div>`;
   },
@@ -413,7 +577,7 @@ RS.UI = {
       }
       const def = RS.upgradeById(pas.id);
       passives.push(
-        this._loadoutSlot(def?.color, pas.level, "mejora", false, def?.name || pas.id)
+        this._loadoutSlot(null, pas.level, pas.id, false, def?.name || pas.id)
       );
     }
     this.els.loadoutPassives.innerHTML = passives.join("");

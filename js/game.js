@@ -9,6 +9,7 @@ RS.Game = {
     RS.Camera.w = this.canvas.width;
     RS.Camera.h = this.canvas.height;
     RS.Input.init();
+    RS.Audio.init();
     RS.UI.init(this);
     this.mode = "menu";
     this.state = null;
@@ -20,6 +21,8 @@ RS.Game = {
   toMenu() {
     this.mode = "menu";
     this.state = null;
+    RS.Audio.stopPlay();
+    RS.Audio.restartMenu();
     RS.UI.show("menu");
     RS.UI.refreshBest();
     RS.UI.refreshGold();
@@ -47,6 +50,7 @@ RS.Game = {
     RS.Camera.x = -RS.Camera.w / 2;
     RS.Camera.y = -RS.Camera.h / 2;
     this.mode = "play";
+    RS.Audio.startPlay();
     RS.UI.show(null);
     RS.UI.updateHud(this.state);
   },
@@ -90,9 +94,16 @@ RS.Game = {
     this.mode = "over";
     this.state.won = won;
     const p = this.state.player;
-    RS.Save.recordRun(this.state.kills, this.state.time, p.id);
     const goldEarned = RS.Save.goldForRun(this.state.kills, this.state.time, won);
     const goldTotal = RS.Save.addGold(goldEarned);
+    RS.Save.recordRun({
+      kills: this.state.kills,
+      time: this.state.time,
+      championId: p.id,
+      won,
+      level: p.level,
+      gold: goldEarned,
+    });
     RS.UI.showGameOver(won, {
       time: this.state.time,
       level: p.level,
@@ -109,6 +120,7 @@ RS.Game = {
 
     if (RS.Input.pressed("escape") || RS.Input.pressed("p")) {
       if (this.mode === "play") this.pause();
+      else if (this.mode === "pause" && RS.UI._screen === "settings") RS.UI.closeSettings();
       else if (this.mode === "pause") this.resume();
     }
 
@@ -189,7 +201,6 @@ RS.Game = {
 
   drawWorld(ctx, state) {
     const half = state.world.size / 2;
-    // arena
     ctx.fillStyle = "#10182a";
     ctx.fillRect(-half, -half, state.world.size, state.world.size);
     this.drawGrid(ctx, RS.Camera.x, RS.Camera.y);

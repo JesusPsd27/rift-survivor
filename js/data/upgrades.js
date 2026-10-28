@@ -15,7 +15,7 @@ RS.UPGRADES = [
   },
   {
     id: "cooldown",
-    name: "Cadencia",
+    name: "Cooldown",
     desc: "-7% cooldown de todas las armas",
     color: "#60a5fa",
     perLevel: 0.07,
@@ -38,8 +38,8 @@ RS.UPGRADES = [
     unit: "hp",
   },
   {
-    id: "area",
-    name: "Área",
+    id: "size",
+    name: "Tamaño",
     desc: "+7% alcance / radio / tamaño",
     color: "#a78bfa",
     perLevel: 0.07,
@@ -52,6 +52,30 @@ RS.UPGRADES = [
     color: "#4ade80",
     perLevel: 1.5,
     unit: "regen",
+  },
+  {
+    id: "armor",
+    name: "Armadura",
+    desc: "+6% reducción de daño",
+    color: "#94a3b8",
+    perLevel: 0.06,
+    unit: "pct",
+  },
+  {
+    id: "magnet",
+    name: "Imán",
+    desc: "+20% radio para atraer orbes",
+    color: "#22d3ee",
+    perLevel: 0.2,
+    unit: "pct",
+  },
+  {
+    id: "xp",
+    name: "Experiencia",
+    desc: "+6% experiencia",
+    color: "#c084fc",
+    perLevel: 0.06,
+    unit: "pct",
   },
 ];
 

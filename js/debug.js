@@ -4,7 +4,7 @@ window.RS = window.RS || {};
  * Overrides de prueba. Pon enabled: true y edita lo que quieras.
  * IDs armas base: recurve_bow | bamis_cinder | fiendish_codex | bf_sword | aether_wisp
  * IDs evo:        kraken_slayer | sunfire_aegis | horizon_focus | infinity_edge | shurelyas_battlesong
- * IDs mejoras:    damage | cooldown | speed | hp | area | regen
+ * IDs mejoras:    damage | cooldown | speed | hp | size | regen | armor | magnet | xp
  *
  * Deja null / [] para no forzar esa parte.
  *
@@ -17,13 +17,13 @@ RS.DEBUG = {
   enabled: false,
 
   /** Reemplaza las armas iniciales del campeón. */
-  startWeapons: ["aether_wisp"], // ej: ["recurve_bow"]
+  startWeapons: null, // ej: ["recurve_bow"]
 
   /** Mejoras que ya tienes al empezar. */
-  startPassives: ["speed", "area"], // ej: ["cooldown"]
+  startPassives: null, // ej: ["cooldown"]
 
   /** Nivel inicial de cada arma/mejora de start* (1–5). */
-  startWeaponLevel: 5,
+  startWeaponLevel: 1,
   startPassiveLevel: 1,
 
   /**

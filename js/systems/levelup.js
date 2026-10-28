@@ -3,8 +3,8 @@ window.RS = window.RS || {};
 RS.LevelUp = {
   gainXp(state, amount) {
     const p = state.player;
-    const mult = RS.DEBUG?.enabled ? RS.DEBUG.xpMult || 1 : 1;
-    p.xp += amount * mult;
+    const debugMult = RS.DEBUG?.enabled ? RS.DEBUG.xpMult || 1 : 1;
+    p.xp += amount * (p.xpMult || 1) * debugMult;
     while (p.xp >= p.xpToLevel) {
       p.xp -= p.xpToLevel;
       p.level += 1;
@@ -136,3 +136,12 @@ RS.LevelUp = {
     state.pendingLevelUps = Math.max(0, state.pendingLevelUps - 1);
   },
 };
+
+(() => {
+  const state = {
+    pendingLevelUps: 0,
+    player: { xp: 0, xpToLevel: 100, level: 1, xpMult: 1.5 },
+  };
+  RS.LevelUp.gainXp(state, 10);
+  console.assert(state.player.xp === 15 && state.player.level === 1, "xp mult");
+})();
