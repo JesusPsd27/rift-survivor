@@ -188,7 +188,7 @@ RS.UI = {
       this.els.previewWeapon.innerHTML = `
         <div class="preview-weapon-label">Arma inicial</div>
         <div class="preview-weapon-row">
-          <div class="preview-weapon-icon" style="background:${w.color}"></div>
+          <div class="preview-weapon-icon">${this._glyph(w.id)}</div>
           <div>
             <strong>${w.name}</strong>
             <span>${w.desc}</span>
@@ -437,9 +437,8 @@ RS.UI = {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "upgrade-card";
-      const iconKind = u.kind === "mejora" || u.kind === "mejora_level" ? u.id : "weapon";
       btn.innerHTML = `
-        <div class="upgrade-icon">${this._glyph(iconKind)}</div>
+        <div class="upgrade-icon">${this._glyph(u.id)}</div>
         <div class="upgrade-body">
           <div class="upgrade-head">
             <strong>${u.name}</strong>
@@ -465,6 +464,7 @@ RS.UI = {
       `<circle cx="8" cy="8" r="5.5" fill="none" stroke="#fff" stroke-width="1.6"/><circle cx="8" cy="8" r="2" fill="#fff"/>`,
       "loadout-glyph",
     );
+    const img = (src) => `<img class="pixel" src="${src}" alt="">`;
     const icons = {
       weapon: box(
         `<path fill="#fff" d="M8 1l1.2 4.2H14l-3.5 2.6L11.8 13 8 10.2 4.2 13l1.3-5.2L2 5.2h4.8z"/>`,
@@ -472,18 +472,21 @@ RS.UI = {
       ),
       mejora,
       passive: mejora,
-      damage: `<img class="pixel" src="icons/damage.svg" alt="">`,
-      hp: `<img class="pixel" src="icons/hp.svg" alt="">`,
-      regen: `<img class="pixel" src="icons/regen.svg" alt="">`,
-      speed: `<img class="pixel" src="icons/speed.svg" alt="">`,
-      cooldown: `<img class="pixel" src="icons/cooldown.svg" alt="">`,
-      size: `<img class="pixel" src="icons/size.svg" alt="">`,
-      armor: `<img class="pixel" src="icons/armor.svg" alt="">`,
-      magnet: `<img class="pixel" src="icons/magnet.svg" alt="">`,
-      xp: `<img class="pixel" src="icons/xp.svg" alt="">`,
+      damage: img("icons/stats/damage.svg"),
+      hp: img("icons/stats/hp.svg"),
+      regen: img("icons/stats/regen.svg"),
+      speed: img("icons/stats/speed.svg"),
+      cooldown: img("icons/stats/cooldown.svg"),
+      size: img("icons/stats/size.svg"),
+      armor: img("icons/stats/armor.svg"),
+      magnet: img("icons/stats/magnet.svg"),
+      xp: img("icons/stats/xp.svg"),
+      recurve_bow: img("icons/weapons/recurve_bow.svg"),
+      bamis_cinder: img("icons/weapons/bamis_cinder.svg"),
+      fiendish_codex: img("icons/weapons/fiendish_codex.svg"),
     };
     if (Object.prototype.hasOwnProperty.call(icons, kind)) return icons[kind];
-    return box(`<circle cx="8" cy="8" r="3" fill="#fff"/>`);
+    return icons.weapon;
   },
 
   _pauseRowsHtml(rows) {
@@ -492,10 +495,11 @@ RS.UI = {
     }
     return rows
       .map((row) => {
-        const plain = row.icon === "weapon" ? "" : " plain";
-        const bg = plain ? "" : ` style="background:${row.color || "#334155"}"`;
+        const glyph = this._glyph(row.icon);
+        const plain = glyph.includes("<img");
+        const bg = plain || !row.color ? "" : ` style="background:${row.color}"`;
         return `<div class="pause-stat">
-          <div class="pause-stat-icon${plain}"${bg}>${this._glyph(row.icon)}</div>
+          <div class="pause-stat-icon${plain ? " plain" : ""}"${bg}>${glyph}</div>
           <span class="pause-stat-name">${row.label}</span>
           <span class="pause-stat-value">${row.value}</span>
         </div>`;
@@ -546,7 +550,7 @@ RS.UI = {
   _loadoutSlot(color, level, kind, empty, title) {
     const glyph = empty ? "" : this._glyph(kind);
     const tip = title ? ` title="${title}"` : "";
-    const bg = color ? ` style="background:${color}"` : "";
+    const bg = color && glyph && !glyph.includes("<img") ? ` style="background:${color}"` : "";
     return `<div class="loadout-slot${empty ? " empty" : ""}"${tip}>
       <div class="loadout-icon"${bg}>${glyph}</div>
       ${this._dots(empty ? 0 : level)}
@@ -563,7 +567,7 @@ RS.UI = {
       }
       const def = RS.weaponById(w.id);
       weapons.push(
-        this._loadoutSlot(def?.color, w.level, "weapon", false, def?.name || w.id)
+        this._loadoutSlot(def?.color, w.level, w.id, false, def?.name || w.id),
       );
     }
     this.els.loadoutWeapons.innerHTML = weapons.join("");

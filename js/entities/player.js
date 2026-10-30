@@ -145,7 +145,7 @@ RS.pauseStatColumns = (p) => {
   for (const w of p.weapons) {
     const def = RS.weaponById(w.id);
     weapons.push({
-      icon: "weapon",
+      icon: w.id,
       color: def?.color || "#64748b",
       label: def?.name || w.id,
       value: `Nv ${w.level} · ${RS.formatStat(w.damage)} dmg`,

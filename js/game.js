@@ -201,9 +201,9 @@ RS.Game = {
 
   drawWorld(ctx, state) {
     const half = state.world.size / 2;
-    ctx.fillStyle = "#10182a";
-    ctx.fillRect(-half, -half, state.world.size, state.world.size);
-    this.drawGrid(ctx, RS.Camera.x, RS.Camera.y);
+    const ground = RS.Ground.ensure(state.world.size);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(ground, -half, -half);
 
     ctx.strokeStyle = "#2a3a55";
     ctx.lineWidth = 4;

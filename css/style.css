@@ -749,11 +749,18 @@ h2 {
 }
 
 .preview-weapon-icon {
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
   flex-shrink: 0;
+  display: grid;
+  place-items: center;
+}
+
+.preview-weapon-icon img,
+.preview-weapon-icon svg {
+  width: 40px;
+  height: 40px;
 }
 
 .preview-weapon-row strong {
