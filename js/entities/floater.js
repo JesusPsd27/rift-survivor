@@ -22,7 +22,7 @@ RS.updateFloaters = (state, dt) => {
 
 RS.drawFloaters = (ctx, state) => {
   ctx.save();
-  ctx.font = "bold 14px Cinzel, Times New Roman, serif";
+  ctx.font = "bold 21px Cinzel, Times New Roman, serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   for (const f of state.floaters) {
@@ -30,7 +30,7 @@ RS.drawFloaters = (ctx, state) => {
     ctx.globalAlpha = a;
     ctx.fillStyle = f.color;
     ctx.strokeStyle = "rgba(0,0,0,0.65)";
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 4;
     ctx.strokeText(f.text, f.x, f.y);
     ctx.fillText(f.text, f.x, f.y);
   }

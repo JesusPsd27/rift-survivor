@@ -70,10 +70,26 @@ RS.updatePickup = (orb, dt, player) => {
 })();
 
 RS.drawPickup = (ctx, orb) => {
-  const r = orb.radius;
-  ctx.fillStyle = orb.color || RS.XP_ORB[orb.value]?.color || "#c084fc";
+  // Solo dibujo: el radio de colisión no cambia. Fase aleatoria para que no latan al unísono.
+  orb.phase = orb.phase ?? Math.random() * 6.28;
+  const pulse = 1 + 0.12 * Math.sin(performance.now() / 220 + orb.phase);
+  const r = orb.radius * 1.6 * pulse;
+  const big = orb.value >= 2;
+  const color = orb.color || RS.XP_ORB[orb.value]?.color || "#c084fc";
+
+  if (big) {
+    // halo morado (gradiente plano, barato con muchos orbes)
+    const g = ctx.createRadialGradient(orb.x, orb.y, r * 0.3, orb.x, orb.y, r * 2.2);
+    g.addColorStop(0, "rgba(192,132,252,0.45)");
+    g.addColorStop(1, "rgba(192,132,252,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(orb.x, orb.y, r * 2.2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
   ctx.beginPath();
-  if (orb.value >= 2) {
+  if (big) {
     // deltoide (cometa): punta arriba, ancha abajo
     ctx.moveTo(orb.x, orb.y - r * 1.2);
     ctx.lineTo(orb.x + r * 0.85, orb.y + r * 0.15);
@@ -87,5 +103,16 @@ RS.drawPickup = (ctx, orb) => {
     ctx.lineTo(orb.x - r, orb.y);
   }
   ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
+  ctx.lineJoin = "round";
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = "#3b0764";
+  ctx.stroke();
+
+  // brillo interior
+  ctx.fillStyle = "rgba(255,255,255,0.85)";
+  ctx.beginPath();
+  ctx.arc(orb.x, orb.y - r * 0.15, r * 0.2, 0, Math.PI * 2);
   ctx.fill();
 };

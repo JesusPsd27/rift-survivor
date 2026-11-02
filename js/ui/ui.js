@@ -457,36 +457,34 @@ RS.UI = {
     this.show("pause");
   },
 
+  // Icono por convención: icons/weapons/<id>.svg (armas) o icons/stats/<id>.svg (stats).
+  // Evoluciones sin icono propio reutilizan el de su arma base; si falta el archivo, glifo genérico.
   _glyph(kind) {
-    const box = (inner, cls) =>
-      `<svg${cls ? ` class="${cls}"` : ""} viewBox="0 0 16 16" aria-hidden="true">${inner}</svg>`;
-    const mejora = box(
-      `<circle cx="8" cy="8" r="5.5" fill="none" stroke="#fff" stroke-width="1.6"/><circle cx="8" cy="8" r="2" fill="#fff"/>`,
-      "loadout-glyph",
+    const box = (inner) =>
+      `<svg class="loadout-glyph" viewBox="0 0 16 16" aria-hidden="true">${inner}</svg>`;
+    const star = box(
+      `<path fill="#fff" d="M8 1l1.2 4.2H14l-3.5 2.6L11.8 13 8 10.2 4.2 13l1.3-5.2L2 5.2h4.8z"/>`,
     );
-    const img = (src) => `<img class="pixel" src="${src}" alt="">`;
-    const icons = {
-      weapon: box(
-        `<path fill="#fff" d="M8 1l1.2 4.2H14l-3.5 2.6L11.8 13 8 10.2 4.2 13l1.3-5.2L2 5.2h4.8z"/>`,
-        "loadout-glyph",
-      ),
-      mejora,
-      passive: mejora,
-      damage: img("icons/stats/damage.svg"),
-      hp: img("icons/stats/hp.svg"),
-      regen: img("icons/stats/regen.svg"),
-      speed: img("icons/stats/speed.svg"),
-      cooldown: img("icons/stats/cooldown.svg"),
-      size: img("icons/stats/size.svg"),
-      armor: img("icons/stats/armor.svg"),
-      magnet: img("icons/stats/magnet.svg"),
-      xp: img("icons/stats/xp.svg"),
-      recurve_bow: img("icons/weapons/recurve_bow.svg"),
-      bamis_cinder: img("icons/weapons/bamis_cinder.svg"),
-      fiendish_codex: img("icons/weapons/fiendish_codex.svg"),
-    };
-    if (Object.prototype.hasOwnProperty.call(icons, kind)) return icons[kind];
-    return icons.weapon;
+    if (kind === "mejora" || kind === "passive") {
+      return box(
+        `<circle cx="8" cy="8" r="5.5" fill="none" stroke="#fff" stroke-width="1.6"/><circle cx="8" cy="8" r="2" fill="#fff"/>`,
+      );
+    }
+    let path;
+    if (RS.weaponById(kind)) {
+      const evo = RS.EVOLUTIONS.find((e) => e.resultWeapon === kind);
+      path = `weapons/${evo ? evo.fromWeapon : kind}`;
+    } else if (RS.UPGRADES.some((u) => u.id === kind)) {
+      path = `stats/${kind}`;
+    } else {
+      return star;
+    }
+    this._starHtml = star;
+    return `<img class="pixel" src="icons/${path}.svg" alt="" onerror="RS.UI._iconFallback(this)">`;
+  },
+
+  _iconFallback(img) {
+    img.outerHTML = this._starHtml;
   },
 
   _pauseRowsHtml(rows) {
