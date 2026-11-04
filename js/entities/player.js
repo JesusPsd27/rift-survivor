@@ -164,17 +164,13 @@ RS.pauseStatColumns = (p) => {
   return { base, weapons, mejoras };
 };
 
-RS.updatePlayer = (p, dt, world) => {
+RS.updatePlayer = (p, dt) => {
   const mv = RS.Input.moveVector();
   if (mv.x || mv.y) {
     p.x += mv.x * p.speed * dt;
     p.y += mv.y * p.speed * dt;
     p.facing = mv;
   }
-
-  const half = world.size / 2;
-  p.x = RS.clamp(p.x, -half + p.radius, half - p.radius);
-  p.y = RS.clamp(p.y, -half + p.radius, half - p.radius);
 
   if (p.regen > 0 && p.hp > 0) {
     p.hp = Math.min(p.maxHp, p.hp + p.regen * dt);

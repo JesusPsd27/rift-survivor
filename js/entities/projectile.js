@@ -55,6 +55,19 @@ RS.updateOrbProjectile = (p, dt, player) => {
   p.life -= dt;
 };
 
+/** Cache de PNG de proyectiles (una Image por src). */
+RS.sprite = (src) => {
+  RS._sprites = RS._sprites || {};
+  if (RS._sprites[src]) return RS._sprites[src];
+  const img = new Image();
+  img.src = src;
+  RS._sprites[src] = img;
+  return img;
+};
+RS.sprite("icons/projectiles/hostile_bolt.png");
+RS.sprite("icons/projectiles/aether_wisp.png");
+RS.sprite("icons/projectiles/orb.png");
+
 RS.drawProjectile = (ctx, p) => {
   if (p.kind === "arrow") {
     RS.drawArrowProjectile(ctx, p);
@@ -64,10 +77,75 @@ RS.drawProjectile = (ctx, p) => {
     RS.drawSpellOrb(ctx, p);
     return;
   }
+  if (p.hostile) {
+    RS.drawHostileBoltSprite(ctx, p);
+    return;
+  }
   ctx.beginPath();
   ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
   ctx.fillStyle = p.color;
   ctx.fill();
+};
+
+/** Caster: PNG orientado a la velocidad + 1 ghost de estela. */
+RS.drawHostileBoltSprite = (ctx, p) => {
+  const img = RS.sprite("icons/projectiles/hostile_bolt.png");
+  if (!img.complete || !img.naturalWidth) {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+    ctx.fillStyle = p.color || "#60a5fa";
+    ctx.fill();
+    return;
+  }
+  const ang = Math.atan2(p.vy, p.vx);
+  const scale = 1.2;
+  const w = img.naturalWidth * scale;
+  const h = img.naturalHeight * scale;
+  const speed = Math.hypot(p.vx, p.vy) || 1;
+  const gx = p.x - (p.vx / speed) * w * 0.35;
+  const gy = p.y - (p.vy / speed) * w * 0.35;
+
+  const blit = (x, y, alpha) => {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.imageSmoothingEnabled = false;
+    ctx.translate(x, y);
+    ctx.rotate(ang);
+    ctx.drawImage(img, -w / 2, -h / 2, w, h);
+    ctx.restore();
+  };
+  blit(gx, gy, 0.35);
+  blit(p.x, p.y, 1);
+};
+
+/**
+ * Brizna / orbital: sheet 8 frames horizontales.
+ * La flama siempre mira hacia arriba; solo cambia la posición al orbitar.
+ */
+RS.drawAetherWisp = (ctx, x, y, radius, phase = 0) => {
+  const img = RS.sprite("icons/projectiles/aether_wisp.png");
+  if (!img.complete || !img.naturalWidth) {
+    ctx.beginPath();
+    ctx.arc(x, y, radius + 4, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(125, 211, 252, 0.25)";
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.fillStyle = "#7dd3fc";
+    ctx.fill();
+    return;
+  }
+  const frames = 8;
+  const fw = Math.floor(img.naturalWidth / frames);
+  const fh = img.naturalHeight;
+  const fi = Math.floor(performance.now() / 80 + phase) % frames;
+  const scale = (radius * 4) / fw;
+  const dw = fw * scale;
+  const dh = fh * scale;
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(img, fi * fw, 0, fw, fh, x - dw / 2, y - dh / 2, dw, dh);
+  ctx.restore();
 };
 
 /** Flecha → orientada a la velocidad. */
@@ -110,24 +188,44 @@ RS.drawArrowProjectile = (ctx, p) => {
   ctx.restore();
 };
 
-/** Hechizo del tomo: núcleo + anillo rúnico. */
+/**
+ * Hechizo del tomo: sheet 4 frames horizontales (punta →), rota a la velocidad + ghost.
+ */
 RS.drawSpellOrb = (ctx, p) => {
+  const img = RS.sprite("icons/projectiles/orb.png");
   const r = p.radius;
-  ctx.beginPath();
-  ctx.arc(p.x, p.y, r + 5, 0, Math.PI * 2);
-  ctx.fillStyle = "rgba(199, 125, 255, 0.22)";
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
-  ctx.fillStyle = p.color;
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(p.x, p.y, r * 0.4, 0, Math.PI * 2);
-  ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(p.x, p.y, r + 3, 0, Math.PI * 2);
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
+  if (!img.complete || !img.naturalWidth) {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, r + 5, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(199, 125, 255, 0.22)";
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+    ctx.fillStyle = p.color || "#c47dff";
+    ctx.fill();
+    return;
+  }
+  const frames = 4;
+  const fw = Math.floor(img.naturalWidth / frames);
+  const fh = img.naturalHeight;
+  const fi = Math.floor(performance.now() / 80) % frames;
+  const scale = (r * 4) / fw;
+  const dw = fw * scale;
+  const dh = fh * scale;
+  const ang = Math.atan2(p.vy, p.vx);
+  const speed = Math.hypot(p.vx, p.vy) || 1;
+  const gx = p.x - (p.vx / speed) * dw * 0.3;
+  const gy = p.y - (p.vy / speed) * dw * 0.3;
+
+  const blit = (x, y, alpha) => {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.imageSmoothingEnabled = false;
+    ctx.translate(x, y);
+    ctx.rotate(ang);
+    ctx.drawImage(img, fi * fw, 0, fw, fh, -dw / 2, -dh / 2, dw, dh);
+    ctx.restore();
+  };
+  blit(gx, gy, 0.35);
+  blit(p.x, p.y, 1);
 };

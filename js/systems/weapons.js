@@ -438,20 +438,8 @@ RS.drawOrbitals = (ctx, player) => {
       const a = (w.orbitAngle || 0) + (i / count) * Math.PI * 2;
       const ox = player.x + Math.cos(a) * w.orbitRadius;
       const oy = player.y + Math.sin(a) * w.orbitRadius;
-      const r = w.projectileRadius;
-      // brizna etérea: halo + núcleo
-      ctx.beginPath();
-      ctx.arc(ox, oy, r + 4, 0, Math.PI * 2);
-      ctx.fillStyle = "rgba(125, 211, 252, 0.25)";
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(ox, oy, r, 0, Math.PI * 2);
-      ctx.fillStyle = def.color;
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(ox - r * 0.25, oy - r * 0.25, r * 0.35, 0, Math.PI * 2);
-      ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
-      ctx.fill();
+      // phase distinta por orbital para que no paren al unísono
+      RS.drawAetherWisp(ctx, ox, oy, w.projectileRadius, i * 2.7);
     }
   }
 };

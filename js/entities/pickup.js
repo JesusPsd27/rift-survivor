@@ -1,22 +1,33 @@
 window.RS = window.RS || {};
 
-/** XP +1: rombo claro. XP +2: deltoide más oscuro. */
+/** XP +1: rombo claro. XP ≥2: deltoide más oscuro. */
 RS.XP_ORB = {
   1: { color: "#e9d5ff", radius: 6 },
   2: { color: "#a855f7", radius: 8 },
 };
 
+/** Soft-cap: más allá se fusionan orbes lejos del jugador. */
+RS.PICKUP_SOFT_CAP = 500;
+RS.PICKUP_MERGE_CELL = 160;
+
+RS.xpOrbLook = (value) => (value >= 2 ? RS.XP_ORB[2] : RS.XP_ORB[1]);
+
 RS.createXpOrb = (x, y, value) => {
-  const v = value >= 2 ? 2 : 1;
-  const look = RS.XP_ORB[v];
+  const v = Math.max(1, Math.round(value));
+  const look = RS.xpOrbLook(v);
   return {
     x,
     y,
     value: v,
     radius: look.radius,
     color: look.color,
-    life: 20,
   };
+};
+
+RS.applyXpOrbLook = (orb) => {
+  const look = RS.xpOrbLook(orb.value);
+  orb.radius = look.radius;
+  orb.color = look.color;
 };
 
 /** Parte el XP total en orbes de 1 y 2 (prioriza 2). */
@@ -36,7 +47,6 @@ RS.spawnXpOrbs = (state, x, y, total) => {
 };
 
 RS.updatePickup = (orb, dt, player) => {
-  orb.life -= dt;
   if (RS.dist(orb.x, orb.y, player.x, player.y) < (player.magnet || 90)) orb.homing = true;
   if (!orb.homing) return;
   // Acelera hasta ir por delante del jugador; una vez enganchado no se suelta.
@@ -45,6 +55,76 @@ RS.updatePickup = (orb, dt, player) => {
   const pull = RS.norm(player.x - orb.x, player.y - orb.y);
   orb.x += pull.x * orb.pull * dt;
   orb.y += pull.y * orb.pull * dt;
+};
+
+/**
+ * Fusiona orbes lejos del imán en celdas de grid para no acumular miles al kitear.
+ * Los que van hacia el jugador (homing) o están cerca no se tocan.
+ */
+RS.trimPickups = (state, player) => {
+  const list = state.pickups;
+  if (list.length <= RS.PICKUP_SOFT_CAP) return;
+
+  const nearR = (player.magnet || 90) * 2;
+  const keep = [];
+  const far = [];
+  for (const o of list) {
+    if (o.homing || RS.dist(o.x, o.y, player.x, player.y) < nearR) keep.push(o);
+    else far.push(o);
+  }
+
+  const cell = RS.PICKUP_MERGE_CELL;
+  const bags = new Map();
+  for (const o of far) {
+    const k = `${Math.floor(o.x / cell)},${Math.floor(o.y / cell)}`;
+    const bag = bags.get(k);
+    if (!bag) {
+      bags.set(k, o);
+      continue;
+    }
+    bag.value += o.value;
+    RS.applyXpOrbLook(bag);
+  }
+
+  state.pickups = keep.concat([...bags.values()]);
+
+  // Si sigue por encima (pila enorme cerca), conservar los más cercanos y volcar el resto en uno.
+  if (state.pickups.length <= RS.PICKUP_SOFT_CAP) return;
+  const scored = state.pickups.map((o) => ({
+    o,
+    d: o.homing ? -1 : RS.dist(o.x, o.y, player.x, player.y),
+  }));
+  scored.sort((a, b) => a.d - b.d);
+  const out = [];
+  let sink = null;
+  const excess = [];
+  for (const { o, d } of scored) {
+    if (d < 0 || out.length < RS.PICKUP_SOFT_CAP) {
+      out.push(o);
+      if (d >= 0) sink = o;
+      continue;
+    }
+    excess.push(o);
+  }
+  if (excess.length) {
+    if (!sink) {
+      sink = excess.shift();
+      out.push(sink);
+    }
+    for (const o of excess) sink.value += o.value;
+    RS.applyXpOrbLook(sink);
+  }
+  state.pickups = out;
+};
+
+RS.pickupOnScreen = (orb, margin = 48) => {
+  const cam = RS.Camera;
+  return (
+    orb.x >= cam.x - margin &&
+    orb.x <= cam.x + cam.w + margin &&
+    orb.y >= cam.y - margin &&
+    orb.y <= cam.y + cam.h + margin
+  );
 };
 
 (() => {
@@ -67,6 +147,16 @@ RS.updatePickup = (orb, dt, player) => {
     if (RS.dist(orb.x, orb.y, player.x, player.y) <= player.radius + orb.radius) caught = true;
   }
   console.assert(overtook && caught, "xp enganchado alcanza a un jugador que huye");
+
+  const state = { pickups: [] };
+  for (let i = 0; i < RS.PICKUP_SOFT_CAP + 40; i++) {
+    state.pickups.push(RS.createXpOrb(2000 + (i % 10) * 20, 2000 + Math.floor(i / 10) * 20, 1));
+  }
+  const before = state.pickups.reduce((s, o) => s + o.value, 0);
+  RS.trimPickups(state, { x: 0, y: 0, magnet: 90 });
+  const after = state.pickups.reduce((s, o) => s + o.value, 0);
+  console.assert(state.pickups.length <= RS.PICKUP_SOFT_CAP, "trim baja bajo soft-cap");
+  console.assert(after === before, "trim conserva XP total");
 })();
 
 RS.drawPickup = (ctx, orb) => {
@@ -75,7 +165,7 @@ RS.drawPickup = (ctx, orb) => {
   const pulse = 1 + 0.12 * Math.sin(performance.now() / 220 + orb.phase);
   const r = orb.radius * 1.6 * pulse;
   const big = orb.value >= 2;
-  const color = orb.color || RS.XP_ORB[orb.value]?.color || "#c084fc";
+  const color = orb.color || RS.xpOrbLook(orb.value).color;
 
   if (big) {
     // halo morado (gradiente plano, barato con muchos orbes)

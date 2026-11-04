@@ -13,6 +13,8 @@ RS.Game = {
     RS.UI.init(this);
     this.mode = "menu";
     this.state = null;
+    this.menuCamX = 0;
+    this.menuCamY = 0;
     this.last = RS.now();
     RS.UI.show("menu");
     requestAnimationFrame(() => this.frame());
@@ -32,7 +34,6 @@ RS.Game = {
     const champ = RS.CHAMPIONS.find((c) => c.id === championId);
     if (!champ) return;
     this.state = {
-      world: { size: 3200 },
       player: RS.createPlayer(champ, 0, 0),
       enemies: [],
       projectiles: [],
@@ -46,6 +47,7 @@ RS.Game = {
       bossSpawned: false,
       won: false,
     };
+    RS.Ground.clearCache();
     RS.Spawner.init(this.state);
     RS.Camera.x = -RS.Camera.w / 2;
     RS.Camera.y = -RS.Camera.h / 2;
@@ -125,16 +127,22 @@ RS.Game = {
     }
 
     if (this.mode === "play") this.update(dt);
+    else if (!this.state) this.updateMenuCam(dt);
     this.draw();
     RS.Input.endFrame();
     requestAnimationFrame(() => this.frame());
+  },
+
+  updateMenuCam(dt) {
+    this.menuCamX += 22 * dt;
+    this.menuCamY += 9 * dt + Math.sin(this.menuCamX * 0.002) * 4 * dt;
   },
 
   update(dt) {
     const s = this.state;
     s.time += dt;
 
-    RS.updatePlayer(s.player, dt, s.world);
+    RS.updatePlayer(s.player, dt);
     RS.Camera.follow(s.player.x, s.player.y, dt);
     RS.Spawner.update(s, dt);
     RS.updateWeapons(s, dt);
@@ -149,7 +157,7 @@ RS.Game = {
     for (const orb of s.pickups) {
       if (RS.dist(orb.x, orb.y, s.player.x, s.player.y) <= s.player.radius + orb.radius) {
         RS.LevelUp.gainXp(s, orb.value);
-        orb.life = 0;
+        orb.dead = true;
       }
     }
 
@@ -157,7 +165,8 @@ RS.Game = {
 
     s.enemies = s.enemies.filter((e) => e.hp > 0);
     s.projectiles = s.projectiles.filter((p) => p.life > 0);
-    s.pickups = s.pickups.filter((o) => o.life > 0);
+    s.pickups = s.pickups.filter((o) => !o.dead);
+    RS.trimPickups(s, s.player);
 
     RS.UI.updateHud(s);
 
@@ -177,20 +186,19 @@ RS.Game = {
     const { width: w, height: h } = this.canvas;
     ctx.clearRect(0, 0, w, h);
 
-    // fondo menú
-    if (!this.state) {
-      ctx.fillStyle = "#0b1220";
-      ctx.fillRect(0, 0, w, h);
-      this.drawGrid(ctx, 0, 0);
-      return;
-    }
-
     ctx.fillStyle = "#0b1220";
     ctx.fillRect(0, 0, w, h);
 
+    if (!this.state) {
+      this.drawMenuBackground(ctx);
+      return;
+    }
+
     RS.Camera.apply(ctx);
-    this.drawWorld(ctx, this.state);
-    for (const orb of this.state.pickups) RS.drawPickup(ctx, orb);
+    this.drawWorld(ctx);
+    for (const orb of this.state.pickups) {
+      if (RS.pickupOnScreen(orb)) RS.drawPickup(ctx, orb);
+    }
     for (const e of this.state.enemies) RS.drawEnemy(ctx, e);
     for (const p of this.state.projectiles) RS.drawProjectile(ctx, p);
     RS.drawSlashes(ctx, this.state);
@@ -199,35 +207,19 @@ RS.Game = {
     RS.Camera.reset(ctx);
   },
 
-  drawWorld(ctx, state) {
-    const half = state.world.size / 2;
-    const ground = RS.Ground.ensure(state.world.size);
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(ground, -half, -half);
-
-    ctx.strokeStyle = "#2a3a55";
-    ctx.lineWidth = 4;
-    ctx.strokeRect(-half, -half, state.world.size, state.world.size);
+  drawMenuBackground(ctx) {
+    const x = this.menuCamX;
+    const y = this.menuCamY;
+    ctx.setTransform(1, 0, 0, 1, -Math.round(x), -Math.round(y));
+    RS.Ground.draw(ctx, x, y, RS.Camera.w, RS.Camera.h);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = "rgba(5, 8, 15, 0.42)";
+    ctx.fillRect(0, 0, RS.Camera.w, RS.Camera.h);
   },
 
-  drawGrid(ctx, ox, oy) {
-    const step = 64;
-    const x0 = Math.floor(ox / step) * step;
-    const y0 = Math.floor(oy / step) * step;
-    ctx.strokeStyle = "rgba(42, 58, 85, 0.45)";
-    ctx.lineWidth = 1;
-    for (let x = x0; x < ox + RS.Camera.w + step; x += step) {
-      ctx.beginPath();
-      ctx.moveTo(x, oy);
-      ctx.lineTo(x, oy + RS.Camera.h);
-      ctx.stroke();
-    }
-    for (let y = y0; y < oy + RS.Camera.h + step; y += step) {
-      ctx.beginPath();
-      ctx.moveTo(ox, y);
-      ctx.lineTo(ox + RS.Camera.w, y);
-      ctx.stroke();
-    }
+  drawWorld(ctx) {
+    const cam = RS.Camera;
+    RS.Ground.draw(ctx, cam.x, cam.y, cam.w, cam.h);
   },
 };
 

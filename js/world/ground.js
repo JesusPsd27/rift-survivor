@@ -1,11 +1,17 @@
 window.RS = window.RS || {};
 
-/** Suelo pixel: pintura de floor de PokéSurvivor (Bosque Umbrío), sin paredes ni líquidos. */
+/**
+ * Suelo pixel infinito: mismos tiles que el bake fijo, pero por chunks
+ * alrededor de la cámara (sin canvas del mundo entero).
+ */
 RS.Ground = (() => {
   const T = 16;
   const PX = 2;
   const TS = T * PX;
   const SEED = 1;
+  const CHUNK_TILES = 8;
+  const CHUNK_WORLD = CHUNK_TILES * TS;
+  const CACHE_MAX = 48;
   const B = {
     floor: ["#3e7a39", "#44813d", "#397134"],
     dirt: ["#7d6742", "#735e3b", "#86704a"],
@@ -14,8 +20,8 @@ RS.Ground = (() => {
     flowers: ["#f4d65c", "#f39ac0", "#eef2ff"],
   };
 
-  let canvas = null;
-  let bakedFor = 0;
+  const cache = new Map();
+  let C = null;
 
   function hash(x, y, seed = 0) {
     let h = Math.imul(x | 0, 374761393) ^ Math.imul(y | 0, 668265263) ^ Math.imul(seed | 0, 2246822519);
@@ -27,6 +33,17 @@ RS.Ground = (() => {
   function pack(hex) {
     const n = parseInt(hex.slice(1), 16);
     return (255 << 24) | ((n & 255) << 16) | (((n >> 8) & 255) << 8) | ((n >> 16) & 255);
+  }
+
+  function ensureColors() {
+    if (C) return;
+    C = {
+      floor: B.floor.map(pack),
+      dirt: B.dirt.map(pack),
+      speck: pack(B.speck),
+      light: pack(B.light),
+      flowers: B.flowers.map(pack),
+    };
   }
 
   function Pix(w, h) {
@@ -88,7 +105,7 @@ RS.Ground = (() => {
     return (x, y) => mask[(y + 1) * W + x] === 1;
   }
 
-  function paintFloor(P, C, ox, oy, tx, ty, dirtAt) {
+  function paintFloor(P, colors, ox, oy, tx, ty, dirtAt) {
     let dirtCount = 0;
     for (let y = 0; y < T; y++) {
       for (let x = 0; x < T; x++) {
@@ -98,14 +115,14 @@ RS.Ground = (() => {
           ly = oy + y;
         const dirt = dirtAt(lx, ly);
         if (dirt) dirtCount++;
-        const pal = dirt ? C.dirt : C.floor;
+        const pal = dirt ? colors.dirt : colors.floor;
         const band = hash(gx >> 3, gy >> 3, 11) * 0.7 + hash(gx, gy, 12) * 0.5;
         let col = pal[Math.min(pal.length - 1, Math.floor((band * pal.length) / 1.2))];
         const r = hash(gx, gy, 13);
-        if (r < 0.035) col = C.speck;
-        else if (r > 0.985) col = C.light;
-        if (dirt && !dirtAt(lx, ly - 1)) col = C.speck;
-        else if (!dirt && dirtAt(lx, ly - 1) && r < 0.5) col = C.light;
+        if (r < 0.035) col = colors.speck;
+        else if (r > 0.985) col = colors.light;
+        if (dirt && !dirtAt(lx, ly - 1)) col = colors.speck;
+        else if (!dirt && dirtAt(lx, ly - 1) && r < 0.5) col = colors.light;
         P.set(ox + x, oy + y, col);
       }
     }
@@ -115,68 +132,108 @@ RS.Ground = (() => {
     const dy = oy + 4 + Math.floor(hash(tx, ty, 16) * 9);
     if (dirt) {
       if (d < 0.22) {
-        P.set(dx, dy, C.light);
-        P.set(dx + 1, dy, C.light);
-        P.set(dx, dy + 1, C.speck);
-        P.set(dx + 1, dy + 1, C.speck);
+        P.set(dx, dy, colors.light);
+        P.set(dx + 1, dy, colors.light);
+        P.set(dx, dy + 1, colors.speck);
+        P.set(dx + 1, dy + 1, colors.speck);
       }
       return;
     }
     if (d < 0.18) {
-      P.set(dx, dy, C.light);
-      P.set(dx - 1, dy - 1, C.light);
-      P.set(dx + 1, dy - 1, C.light);
-      P.set(dx, dy - 2, C.light);
-      P.set(dx, dy + 1, C.speck);
+      P.set(dx, dy, colors.light);
+      P.set(dx - 1, dy - 1, colors.light);
+      P.set(dx + 1, dy - 1, colors.light);
+      P.set(dx, dy - 2, colors.light);
+      P.set(dx, dy + 1, colors.speck);
     } else if (d < 0.26) {
-      const fc = C.flowers[Math.floor(hash(tx, ty, 17) * C.flowers.length)];
+      const fc = colors.flowers[Math.floor(hash(tx, ty, 17) * colors.flowers.length)];
       P.set(dx, dy - 1, fc);
       P.set(dx - 1, dy, fc);
       P.set(dx + 1, dy, fc);
       P.set(dx, dy + 1, fc);
-      P.set(dx, dy, C.light);
+      P.set(dx, dy, colors.light);
     } else if (d < 0.32) {
-      P.set(dx, dy, C.light);
-      P.set(dx + 1, dy, C.light);
-      P.set(dx, dy + 1, C.speck);
-      P.set(dx + 1, dy + 1, C.speck);
+      P.set(dx, dy, colors.light);
+      P.set(dx + 1, dy, colors.light);
+      P.set(dx, dy + 1, colors.speck);
+      P.set(dx + 1, dy + 1, colors.speck);
     }
   }
 
-  function bake(worldSize) {
-    // shortcut: arena fija divisible por el tile de mundo; si cambia el tamaño, ajustar TS o world.size
-    console.assert(worldSize % TS === 0, "world.size must be multiple of tile", TS);
-    const n = worldSize / TS;
-    const art = n * T;
+  function bakeChunk(cx, cy) {
+    ensureColors();
+    const tx0 = cx * CHUNK_TILES;
+    const ty0 = cy * CHUNK_TILES;
+    const art = CHUNK_TILES * T;
     const P = Pix(art, art);
-    const C = {
-      floor: B.floor.map(pack),
-      dirt: B.dirt.map(pack),
-      speck: pack(B.speck),
-      light: pack(B.light),
-      flowers: B.flowers.map(pack),
-    };
     const S = 6 * T;
     const dirtField = (gx, gy) => fbm(gx / S, gy / S, SEED + 303);
-    const dirtAt = dirtMask(0, 0, art, dirtField);
-    for (let ty = 0; ty < n; ty++) {
-      for (let tx = 0; tx < n; tx++) paintFloor(P, C, tx * T, ty * T, tx, ty, dirtAt);
+    const dirtAt = dirtMask(tx0 * T, ty0 * T, art, dirtField);
+    for (let ty = ty0; ty < ty0 + CHUNK_TILES; ty++) {
+      for (let tx = tx0; tx < tx0 + CHUNK_TILES; tx++) {
+        paintFloor(P, C, (tx - tx0) * T, (ty - ty0) * T, tx, ty, dirtAt);
+      }
     }
     const artCv = P.canvas();
     const out = document.createElement("canvas");
-    out.width = worldSize;
-    out.height = worldSize;
+    out.width = CHUNK_WORLD;
+    out.height = CHUNK_WORLD;
     const g = out.getContext("2d");
     g.imageSmoothingEnabled = false;
-    g.drawImage(artCv, 0, 0, worldSize, worldSize);
-    canvas = out;
-    bakedFor = worldSize;
+    g.drawImage(artCv, 0, 0, CHUNK_WORLD, CHUNK_WORLD);
+    return out;
+  }
+
+  function chunkKey(cx, cy) {
+    return `${cx},${cy}`;
+  }
+
+  function getChunk(cx, cy) {
+    const k = chunkKey(cx, cy);
+    let entry = cache.get(k);
+    if (entry) {
+      cache.delete(k);
+      cache.set(k, entry);
+      return entry.canvas;
+    }
+    const canvas = bakeChunk(cx, cy);
+    cache.set(k, { canvas, cx, cy });
+    while (cache.size > CACHE_MAX) {
+      const oldest = cache.keys().next().value;
+      cache.delete(oldest);
+    }
+    return canvas;
   }
 
   return {
-    ensure(worldSize) {
-      if (!canvas || bakedFor !== worldSize) bake(worldSize);
-      return canvas;
+    tileSize: TS,
+    chunkWorld: CHUNK_WORLD,
+
+    /** Dibuja chunks que cubren el viewport de cámara (coords mundo). */
+    draw(ctx, camX, camY, camW, camH) {
+      const x0 = Math.floor(camX / CHUNK_WORLD) - 1;
+      const y0 = Math.floor(camY / CHUNK_WORLD) - 1;
+      const x1 = Math.floor((camX + camW) / CHUNK_WORLD) + 1;
+      const y1 = Math.floor((camY + camH) / CHUNK_WORLD) + 1;
+      ctx.imageSmoothingEnabled = false;
+      // +1px de solape: tapa costuras por redondeo / scale CSS del canvas.
+      const pad = 1;
+      for (let cy = y0; cy <= y1; cy++) {
+        for (let cx = x0; cx <= x1; cx++) {
+          const img = getChunk(cx, cy);
+          const x = cx * CHUNK_WORLD;
+          const y = cy * CHUNK_WORLD;
+          ctx.drawImage(img, x, y, CHUNK_WORLD + pad, CHUNK_WORLD + pad);
+        }
+      }
+    },
+
+    clearCache() {
+      cache.clear();
     },
   };
+})();
+
+(() => {
+  console.assert(RS.Ground.chunkWorld % RS.Ground.tileSize === 0, "chunk multiple of tile");
 })();

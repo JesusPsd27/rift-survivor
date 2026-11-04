@@ -13,7 +13,7 @@ RS.Camera = {
   },
 
   apply(ctx) {
-    ctx.setTransform(1, 0, 0, 1, -this.x, -this.y);
+    ctx.setTransform(1, 0, 0, 1, -Math.round(this.x), -Math.round(this.y));
   },
 
   reset(ctx) {

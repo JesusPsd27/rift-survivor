@@ -1,6 +1,9 @@
 window.RS = window.RS || {};
 
 RS.Spawner = {
+  /** Más allá de esto (y fuera de cámara) el enemigo se despawnea. */
+  DESPAWN_DIST: 1400,
+
   init(state) {
     state.spawnTimer = 0.4;
     state.spawnRate = 1.1;
@@ -23,6 +26,17 @@ RS.Spawner = {
       this.spawnBoss(state);
       state.bossSpawned = true;
     }
+
+    this.cullFar(state);
+  },
+
+  cullFar(state) {
+    const p = state.player;
+    const maxD = this.DESPAWN_DIST;
+    state.enemies = state.enemies.filter((e) => {
+      if (e.isBoss) return true;
+      return RS.dist(e.x, e.y, p.x, p.y) < maxD;
+    });
   },
 
   pickType() {
@@ -74,6 +88,20 @@ RS.Spawner = {
     boss.color = "#c8aa6e";
     boss.radius = 48;
     boss.xp = 2;
+    boss.isBoss = true;
     state.enemies.push(boss);
   },
 };
+
+(() => {
+  const state = {
+    player: { x: 0, y: 0 },
+    enemies: [
+      { x: 100, y: 0 },
+      { x: RS.Spawner.DESPAWN_DIST + 50, y: 0 },
+      { x: RS.Spawner.DESPAWN_DIST + 50, y: 0, isBoss: true },
+    ],
+  };
+  RS.Spawner.cullFar(state);
+  console.assert(state.enemies.length === 2, "cullFar quita lejanos y deja boss");
+})();
