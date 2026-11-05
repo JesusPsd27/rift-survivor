@@ -175,6 +175,7 @@ h2 {
 .upgrade-icon img {
   width: 36px;
   height: 36px;
+  image-rendering: pixelated;
 }
 
 .upgrade-body { flex: 1; min-width: 0; }
@@ -292,7 +293,13 @@ h2 {
   width: 36px;
   height: 36px;
   opacity: 0.95;
+  image-rendering: pixelated;
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.55));
+}
+
+/* filter re-rasteriza con AA; en pixel-art se ve como puntos negros */
+.loadout-icon img.pixel {
+  filter: none;
 }
 
 .loadout-dots {
@@ -484,6 +491,7 @@ h2 {
 .pause-stat-icon img {
   width: 22px;
   height: 22px;
+  image-rendering: pixelated;
 }
 
 .pause-stat-icon.plain svg,
@@ -761,6 +769,7 @@ h2 {
 .preview-weapon-icon svg {
   width: 40px;
   height: 40px;
+  image-rendering: pixelated;
 }
 
 .preview-weapon-row strong {
@@ -859,9 +868,14 @@ h2 {
 .meta-card-icon img {
   width: 52px;
   height: 52px;
+  image-rendering: pixelated;
 }
 
-img.pixel { image-rendering: pixelated; }
+img.pixel {
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+}
 
 .meta-pips {
   display: flex;
