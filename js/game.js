@@ -1,7 +1,7 @@
 window.RS = window.RS || {};
 
 RS.Game = {
-  WIN_TIME: 240, // 4 min survival = victoria básica
+  WIN_TIME: 900, // 15 min survival = victoria
 
   init() {
     this.canvas = document.getElementById("game");
@@ -44,7 +44,7 @@ RS.Game = {
       kills: 0,
       pendingLevelUps: 0,
       pendingGameOver: false,
-      bossSpawned: false,
+      bossWave: 0,
       won: false,
     };
     RS.Ground.clearCache();

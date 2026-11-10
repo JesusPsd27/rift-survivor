@@ -44,13 +44,13 @@ RS.levelWeapon = (player, weaponId) => {
 /**
  * Bonos acumulados del arma (solo esa arma).
  * Proyectil / orbe:
- *   2 +1 proy | 3 +40% dmg | 4 +30% Cooldown | 5 +1 proy, +30% dmg, +15% Cooldown
+ *   2 +1 proy | 3 +25% dmg | 4 +30% Cooldown | 5 +15% dmg, +15% Cooldown
  * Aura:
  *   2 +40% tamaño | 3 +40% dmg | 4 +40% Cooldown | 5 +30% tamaño, +30% dmg, +15% Cooldown
  * Melee:
- *   2 +20% dmg | 3 +1 triángulo | 4 +20% Cooldown | 5 +20% dmg, +15% Cooldown, +1 triángulo
+ *   2 +20% dmg | 3 +1 triángulo, +15% dmg | 4 +20% Cooldown | 5 +20% dmg, +15% Cooldown, +1 triángulo
  * Orbital:
- *   2 +1 orb | 3 +20% dmg | 4 +1 orb, +10% giro | 5 +1 orb, +15% dmg, +10% giro
+ *   2 +1 orb | 3 +35% dmg | 4 +1 orb, +10% giro | 5 +1 orb, +25% dmg, +10% giro
  */
 RS.weaponLevelMods = (type, level) => {
   const L = level || 1;
@@ -65,11 +65,10 @@ RS.weaponLevelMods = (type, level) => {
 
   if (type === "projectile" || type === "orb") {
     if (L >= 2) mods.projectiles += 1;
-    if (L >= 3) mods.damage += 0.4;
+    if (L >= 3) mods.damage += 0.25;
     if (L >= 4) mods.cadence += 0.3;
     if (L >= 5) {
-      mods.projectiles += 1;
-      mods.damage += 0.3;
+      mods.damage += 0.15;
       mods.cadence += 0.15;
     }
     return mods;
@@ -89,7 +88,10 @@ RS.weaponLevelMods = (type, level) => {
 
   if (type === "melee") {
     if (L >= 2) mods.damage += 0.2;
-    if (L >= 3) mods.meleeWedges += 1;
+    if (L >= 3) {
+      mods.meleeWedges += 1;
+      mods.damage += 0.15;
+    }
     if (L >= 4) mods.cadence += 0.2;
     if (L >= 5) {
       mods.damage += 0.2;
@@ -101,14 +103,14 @@ RS.weaponLevelMods = (type, level) => {
 
   if (type === "orbital") {
     if (L >= 2) mods.projectiles += 1;
-    if (L >= 3) mods.damage += 0.2;
+    if (L >= 3) mods.damage += 0.35;
     if (L >= 4) {
       mods.projectiles += 1;
       mods.spin += 0.1;
     }
     if (L >= 5) {
       mods.projectiles += 1;
-      mods.damage += 0.15;
+      mods.damage += 0.25;
       mods.spin += 0.1;
     }
     return mods;
@@ -122,15 +124,15 @@ RS.weaponLevelUpText = (type, toLevel) => {
   const L = toLevel;
   if (type === "projectile") {
     if (L === 2) return "+1 proyectil";
-    if (L === 3) return "+40% daño de esta arma";
+    if (L === 3) return "+25% daño de esta arma";
     if (L === 4) return "+30% Cooldown de esta arma";
-    if (L === 5) return "+1 proyectil · +30% daño · +15% Cooldown";
+    if (L === 5) return "+15% daño · +15% Cooldown";
   }
   if (type === "orb") {
     if (L === 2) return "+1 hechizo";
-    if (L === 3) return "+40% daño de esta arma";
+    if (L === 3) return "+25% daño de esta arma";
     if (L === 4) return "+30% Cooldown de esta arma";
-    if (L === 5) return "+1 hechizo · +30% daño · +15% Cooldown";
+    if (L === 5) return "+15% daño · +15% Cooldown";
   }
   if (type === "aura") {
     if (L === 2) return "+40% tamaño de esta arma";
@@ -140,15 +142,15 @@ RS.weaponLevelUpText = (type, toLevel) => {
   }
   if (type === "melee") {
     if (L === 2) return "+20% daño de esta arma";
-    if (L === 3) return "+1 triángulo de tajo";
+    if (L === 3) return "+1 triángulo de tajo · +15% daño";
     if (L === 4) return "+20% Cooldown de esta arma";
     if (L === 5) return "+20% daño · +15% Cooldown · +1 triángulo de tajo";
   }
   if (type === "orbital") {
     if (L === 2) return "+1 orbital";
-    if (L === 3) return "+20% daño";
+    if (L === 3) return "+35% daño";
     if (L === 4) return "+1 orbital · +10% velocidad de giro";
-    if (L === 5) return "+1 orbital · +15% daño · +10% giro";
+    if (L === 5) return "+1 orbital · +25% daño · +10% giro";
   }
   return `Sube a nivel ${L}`;
 };
@@ -222,7 +224,7 @@ RS.updateOrbitalWeapon = (state, w, def, dt) => {
   const p = state.player;
   w.orbitAngle = (w.orbitAngle || 0) + (w.orbitSpeed || 2.5) * dt;
   const count = Math.max(1, w.projectiles || 1);
-  const hitEvery = Math.max(0.2, w.cooldown * 0.85);
+  const hitEvery = Math.max(0.18, w.cooldown * 0.75);
 
   for (let i = 0; i < count; i++) {
     const a = w.orbitAngle + (i / count) * Math.PI * 2;
@@ -319,6 +321,7 @@ RS.Weapons = {
           life: w.range / w.projectileSpeed + 0.15,
           color: def.color,
           kind: "arrow",
+          sprite: def.projectileSprite,
         })
       );
     }
@@ -347,6 +350,7 @@ RS.Weapons = {
           phase: "out",
           speed: w.projectileSpeed,
           maxDist: w.range,
+          sprite: def.projectileSprite,
         })
       );
     }
@@ -364,6 +368,7 @@ RS.Weapons = {
         : { x: 1, y: 0 };
 
     state.slashes = state.slashes || [];
+    const slashLife = def.projectileSprite ? 0.18 : 0.12;
     state.slashes.push({
       x: p.x,
       y: p.y,
@@ -371,62 +376,62 @@ RS.Weapons = {
       range,
       arc,
       color: def.color,
-      life: 0.12,
-      maxLife: 0.12,
+      sprite: def.projectileSprite || null,
+      life: slashLife,
+      maxLife: slashLife,
     });
 
+    // Hitbox alineada al sprite (más grande/ancho que el cono de datos).
+    const hit = def.projectileSprite ? RS.slashHitbox(range, arc) : { range, arc };
     const face = Math.atan2(facing.y, facing.x);
     for (const e of state.enemies) {
       if (e.hp <= 0) continue;
       const dx = e.x - p.x;
       const dy = e.y - p.y;
       const dist = Math.hypot(dx, dy);
-      if (dist > range + e.radius) continue;
+      if (dist > hit.range + e.radius) continue;
       const ang = Math.atan2(dy, dx);
       let diff = ang - face;
       while (diff > Math.PI) diff -= Math.PI * 2;
       while (diff < -Math.PI) diff += Math.PI * 2;
-      if (Math.abs(diff) <= arc / 2) {
+      if (Math.abs(diff) <= hit.arc / 2) {
         RS.Combat.hurtEnemy(state, e, w.damage);
       }
     }
   },
 };
 
+/** Escala/offset del crescent; mismos números en dibujo y daño. */
+RS.SLASH_VIS = { scale: 1.55, offset: 0.45, aspect: 32 / 48 };
+
+RS.slashHitbox = (range, arc) => {
+  const v = RS.SLASH_VIS;
+  const hitRange = range * (v.offset + v.scale / 2);
+  const halfH = (range * v.scale * v.aspect) / 2;
+  const hitArc = Math.max(arc, 2 * Math.atan2(halfH, range * v.offset));
+  return { range: hitRange, arc: hitArc };
+};
+
 RS.drawWeaponAuras = (ctx, player) => {
-  const t = typeof RS.now === "function" ? RS.now() : performance.now() / 1000;
   for (const w of player.weapons) {
     const def = RS.weaponById(w.id);
-    if (!def || def.type !== "aura") continue;
-
-    // borde base
-    ctx.beginPath();
-    ctx.arc(player.x, player.y, w.auraRadius, 0, Math.PI * 2);
-    ctx.strokeStyle = "rgba(255, 140, 66, 0.35)";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    // heatwave: anillos que se expanden y se desvanecen
-    for (let i = 0; i < 3; i++) {
-      const phase = (t * 0.7 + i / 3) % 1;
-      const r = w.auraRadius * (0.25 + phase * 0.75);
-      ctx.beginPath();
-      ctx.arc(player.x, player.y, r, 0, Math.PI * 2);
-      ctx.strokeStyle = `rgba(255, 120, 40, ${0.32 * (1 - phase)})`;
-      ctx.lineWidth = 2.5 * (1 - phase * 0.5);
-      ctx.stroke();
-    }
-
-    // glow suave interior
-    const g = ctx.createRadialGradient(player.x, player.y, 0, player.x, player.y, w.auraRadius);
-    g.addColorStop(0, "rgba(255, 140, 66, 0.08)");
-    g.addColorStop(0.7, "rgba(255, 100, 30, 0.05)");
-    g.addColorStop(1, "rgba(255, 80, 20, 0)");
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.arc(player.x, player.y, w.auraRadius, 0, Math.PI * 2);
-    ctx.fill();
+    if (!def || def.type !== "aura" || !def.projectileSprite) continue;
+    RS.drawAuraSprite(ctx, player.x, player.y, w.auraRadius, def.projectileSprite);
   }
+};
+
+/** Sheet 8 frames horizontales; escala al diámetro del aura. */
+RS.drawAuraSprite = (ctx, x, y, radius, spriteSrc) => {
+  const img = RS.sprite(spriteSrc);
+  if (!RS._spriteReady?.(img)) return;
+  const { fw, fh, sx } = RS._sheetFrame(img, 8);
+  const scale = (radius * 2) / Math.max(fw, fh);
+  const dw = fw * scale;
+  const dh = fh * scale;
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(img, sx, 0, fw, fh, x - dw / 2, y - dh / 2, dw, dh);
+  ctx.restore();
 };
 
 RS.drawOrbitals = (ctx, player) => {
@@ -439,7 +444,14 @@ RS.drawOrbitals = (ctx, player) => {
       const ox = player.x + Math.cos(a) * w.orbitRadius;
       const oy = player.y + Math.sin(a) * w.orbitRadius;
       // phase distinta por orbital para que no paren al unísono
-      RS.drawAetherWisp(ctx, ox, oy, w.projectileRadius, i * 2.7);
+      RS.drawAetherWisp(
+        ctx,
+        ox,
+        oy,
+        w.projectileRadius,
+        i * 2.7,
+        def.projectileSprite
+      );
     }
   }
 };
@@ -447,19 +459,46 @@ RS.drawOrbitals = (ctx, player) => {
 RS.drawSlashes = (ctx, state) => {
   if (!state.slashes) return;
   for (const s of state.slashes) {
-    const a = 1 - s.life / s.maxLife;
+    const progress = 1 - s.life / s.maxLife;
     const face = Math.atan2(s.facing.y, s.facing.x);
+    if (s.sprite && RS.sprite) {
+      RS.drawSlashSprite(ctx, s, face, progress);
+      continue;
+    }
     ctx.beginPath();
     ctx.moveTo(s.x, s.y);
     ctx.arc(s.x, s.y, s.range, face - s.arc / 2, face + s.arc / 2);
     ctx.closePath();
     ctx.fillStyle = s.color;
-    ctx.globalAlpha = 0.4 * (1 - a);
+    ctx.globalAlpha = 0.4 * (1 - progress);
     ctx.fill();
-    ctx.globalAlpha = 0.55 * (1 - a);
+    ctx.globalAlpha = 0.55 * (1 - progress);
     ctx.strokeStyle = "#ffffff";
     ctx.lineWidth = 2;
     ctx.stroke();
     ctx.globalAlpha = 1;
   }
+};
+
+/** Sheet 4 frames horizontales (crescent →); progreso 0→1 elige frame + fade. */
+RS.drawSlashSprite = (ctx, s, face, progress) => {
+  const img = RS.sprite(s.sprite);
+  if (!img.complete || !img.naturalWidth) return;
+  const frames = 4;
+  const fw = Math.floor(img.naturalWidth / frames);
+  const fh = img.naturalHeight;
+  const fi = Math.min(frames - 1, Math.floor(progress * frames));
+  const v = RS.SLASH_VIS;
+  const scale = (s.range * v.scale) / Math.max(fw, fh);
+  const dw = fw * scale;
+  const dh = fh * scale;
+  const ox = s.x + Math.cos(face) * s.range * v.offset;
+  const oy = s.y + Math.sin(face) * s.range * v.offset;
+  ctx.save();
+  ctx.globalAlpha = 0.95 * (1 - progress * 0.35);
+  ctx.imageSmoothingEnabled = false;
+  ctx.translate(ox, oy);
+  ctx.rotate(face);
+  ctx.drawImage(img, fi * fw, 0, fw, fh, -dw / 2, -dh / 2, dw, dh);
+  ctx.restore();
 };

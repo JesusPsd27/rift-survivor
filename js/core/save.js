@@ -76,16 +76,27 @@ RS.Save = {
     let bestKills = 0;
     let bestLevel = 0;
     let bestTime = 0;
+    let bestKillsChamp = null;
+    let bestLevelChamp = null;
+    let bestTimeChamp = null;
     for (const r of list) {
       if (r.won) wins += 1;
       kills += r.kills || 0;
       time += r.time || 0;
       gold += r.gold || 0;
-      if ((r.kills || 0) > bestKills) bestKills = r.kills;
-      if ((r.level || 0) > bestLevel) bestLevel = r.level;
-      if ((r.time || 0) > bestTime) bestTime = r.time;
+      if ((r.kills || 0) > bestKills) {
+        bestKills = r.kills;
+        bestKillsChamp = r.championId;
+      }
+      if ((r.level || 0) > bestLevel) {
+        bestLevel = r.level;
+        bestLevelChamp = r.championId;
+      }
+      if ((r.time || 0) > bestTime) {
+        bestTime = r.time;
+        bestTimeChamp = r.championId;
+      }
     }
-    const top = list.slice().sort((a, b) => (b.time || 0) - (a.time || 0)).slice(0, 5);
     const n = list.length;
     return {
       runs: n,
@@ -97,13 +108,25 @@ RS.Save = {
       bestKills,
       bestLevel,
       bestTime,
-      top,
+      bestKillsChamp,
+      bestLevelChamp,
+      bestTimeChamp,
+      list,
     };
   },
 
-  /** Oro ganado al terminar: kills + bonus tiempo + victoria. */
+  /** Top N partidas según sort: time | kills | recent */
+  rankRuns(runs, sort = "time", limit = 5) {
+    const list = (runs || []).slice();
+    if (sort === "kills") list.sort((a, b) => (b.kills || 0) - (a.kills || 0) || (b.time || 0) - (a.time || 0));
+    else if (sort === "recent") list.reverse();
+    else list.sort((a, b) => (b.time || 0) - (a.time || 0) || (b.kills || 0) - (a.kills || 0));
+    return list.slice(0, limit);
+  },
+
+  /** Oro ganado al terminar: kills + bonus tiempo + victoria (tunado a runs de 15 min). */
   goldForRun(kills, time, won) {
-    return Math.max(0, kills + Math.floor(time / 8) + (won ? 40 : 0));
+    return Math.max(0, kills + Math.floor(time / 20) + (won ? 50 : 0));
   },
 
   addGold(amount) {
@@ -162,7 +185,8 @@ RS.Save = {
     ],
     "ashe",
   );
-  if (s.runs !== 2 || s.wins !== 1 || s.losses !== 1 || s.kills !== 4 || s.top[0].time !== 50) {
+  const top = RS.Save.rankRuns(s.list, "time", 5);
+  if (s.runs !== 2 || s.wins !== 1 || s.losses !== 1 || s.kills !== 4 || top[0].time !== 50) {
     throw new Error("RS.Save.summarize");
   }
 })();

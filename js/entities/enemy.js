@@ -1,15 +1,16 @@
 window.RS = window.RS || {};
 
-RS.createEnemy = (type, x, y, scale = 1) => ({
+RS.createEnemy = (type, x, y, scale = 1, armor = 0, speedMult = 1) => ({
   id: type.id,
   color: type.color,
   x,
   y,
-  radius: type.radius * (scale > 1 ? 1.2 : 1),
+  radius: type.radius * (scale >= 4 ? 1.2 : 1),
   maxHp: type.hp * scale,
   hp: type.hp * scale,
-  speed: type.speed * (scale > 1 ? 0.9 : 1),
+  speed: type.speed * speedMult,
   damage: type.damage * scale,
+  armor: Math.max(0, Math.min(0.6, armor || 0)),
   xp: type.xp, // fijo: no escala con el tiempo
   hitFlash: 0,
   preferRange: type.preferRange || 0,

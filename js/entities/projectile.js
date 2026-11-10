@@ -18,6 +18,7 @@ RS.createProjectile = (opts) => ({
   traveled: 0,
   hitOut: opts.kind === "orb" ? new Set() : null,
   hitBack: opts.kind === "orb" ? new Set() : null,
+  sprite: opts.sprite || null,
 });
 
 RS.updateProjectile = (p, dt, player) => {
@@ -55,7 +56,7 @@ RS.updateOrbProjectile = (p, dt, player) => {
   p.life -= dt;
 };
 
-/** Cache de PNG de proyectiles (una Image por src). */
+/** Cache de PNG (una Image por src). Lazy: también sirve si no se prelogueó. */
 RS.sprite = (src) => {
   RS._sprites = RS._sprites || {};
   if (RS._sprites[src]) return RS._sprites[src];
@@ -64,9 +65,49 @@ RS.sprite = (src) => {
   RS._sprites[src] = img;
   return img;
 };
-RS.sprite("icons/projectiles/hostile_bolt.png");
-RS.sprite("icons/projectiles/aether_wisp.png");
-RS.sprite("icons/projectiles/orb.png");
+
+RS._spriteReady = (img) => img && img.complete && img.naturalWidth > 0;
+
+/**
+ * Precarga: bolt hostil + todos los projectileSprite de armas.
+ * Fuente de verdad = WEAPONS (cargado antes que este archivo).
+ */
+RS.HOSTILE_BOLT = "icons/projectiles/hostile_bolt.png";
+RS.preloadProjectileSprites = () => {
+  RS.sprite(RS.HOSTILE_BOLT);
+  if (!RS.WEAPONS) return;
+  for (const w of RS.WEAPONS) {
+    if (w.projectileSprite) RS.sprite(w.projectileSprite);
+  }
+};
+RS.preloadProjectileSprites();
+
+/** Frame de sheet horizontal: { fw, fh, fi, sx }. */
+RS._sheetFrame = (img, frames, phase = 0) => {
+  const fw = Math.floor(img.naturalWidth / frames);
+  const fh = img.naturalHeight;
+  const fi = Math.floor(performance.now() / 80 + phase) % frames;
+  return { fw, fh, fi, sx: fi * fw };
+};
+
+/** PNG/frame orientado a la velocidad + 1 ghost de estela. */
+RS._blitFacingTrail = (ctx, img, x, y, vx, vy, dw, dh, ang, sx, sy, sw, sh) => {
+  const speed = Math.hypot(vx, vy) || 1;
+  const gx = x - (vx / speed) * dw * 0.3;
+  const gy = y - (vy / speed) * dw * 0.3;
+  const blit = (bx, by, alpha) => {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.imageSmoothingEnabled = false;
+    ctx.translate(bx, by);
+    ctx.rotate(ang);
+    if (sw != null) ctx.drawImage(img, sx, sy, sw, sh, -dw / 2, -dh / 2, dw, dh);
+    else ctx.drawImage(img, -dw / 2, -dh / 2, dw, dh);
+    ctx.restore();
+  };
+  blit(gx, gy, 0.35);
+  blit(x, y, 1);
+};
 
 RS.drawProjectile = (ctx, p) => {
   if (p.kind === "arrow") {
@@ -89,8 +130,8 @@ RS.drawProjectile = (ctx, p) => {
 
 /** Caster: PNG orientado a la velocidad + 1 ghost de estela. */
 RS.drawHostileBoltSprite = (ctx, p) => {
-  const img = RS.sprite("icons/projectiles/hostile_bolt.png");
-  if (!img.complete || !img.naturalWidth) {
+  const img = RS.sprite(RS.HOSTILE_BOLT);
+  if (!RS._spriteReady(img)) {
     ctx.beginPath();
     ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
     ctx.fillStyle = p.color || "#60a5fa";
@@ -101,30 +142,16 @@ RS.drawHostileBoltSprite = (ctx, p) => {
   const scale = 1.2;
   const w = img.naturalWidth * scale;
   const h = img.naturalHeight * scale;
-  const speed = Math.hypot(p.vx, p.vy) || 1;
-  const gx = p.x - (p.vx / speed) * w * 0.35;
-  const gy = p.y - (p.vy / speed) * w * 0.35;
-
-  const blit = (x, y, alpha) => {
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.imageSmoothingEnabled = false;
-    ctx.translate(x, y);
-    ctx.rotate(ang);
-    ctx.drawImage(img, -w / 2, -h / 2, w, h);
-    ctx.restore();
-  };
-  blit(gx, gy, 0.35);
-  blit(p.x, p.y, 1);
+  RS._blitFacingTrail(ctx, img, p.x, p.y, p.vx, p.vy, w, h, ang);
 };
 
 /**
  * Brizna / orbital: sheet 8 frames horizontales.
  * La flama siempre mira hacia arriba; solo cambia la posición al orbitar.
  */
-RS.drawAetherWisp = (ctx, x, y, radius, phase = 0) => {
-  const img = RS.sprite("icons/projectiles/aether_wisp.png");
-  if (!img.complete || !img.naturalWidth) {
+RS.drawAetherWisp = (ctx, x, y, radius, phase = 0, spriteSrc) => {
+  const img = RS.sprite(spriteSrc);
+  if (!RS._spriteReady(img)) {
     ctx.beginPath();
     ctx.arc(x, y, radius + 4, 0, Math.PI * 2);
     ctx.fillStyle = "rgba(125, 211, 252, 0.25)";
@@ -135,66 +162,54 @@ RS.drawAetherWisp = (ctx, x, y, radius, phase = 0) => {
     ctx.fill();
     return;
   }
-  const frames = 8;
-  const fw = Math.floor(img.naturalWidth / frames);
-  const fh = img.naturalHeight;
-  const fi = Math.floor(performance.now() / 80 + phase) % frames;
+  const { fw, fh, sx } = RS._sheetFrame(img, 8, phase);
   const scale = (radius * 4) / fw;
   const dw = fw * scale;
   const dh = fh * scale;
   ctx.save();
   ctx.imageSmoothingEnabled = false;
-  ctx.drawImage(img, fi * fw, 0, fw, fh, x - dw / 2, y - dh / 2, dw, dh);
+  ctx.drawImage(img, sx, 0, fw, fh, x - dw / 2, y - dh / 2, dw, dh);
   ctx.restore();
 };
 
-/** Flecha → orientada a la velocidad. */
+/** Flecha PNG (punta →) orientada a la velocidad + ghost. */
 RS.drawArrowProjectile = (ctx, p) => {
-  const ang = Math.atan2(p.vy, p.vx);
+  const img = RS.sprite(p.sprite);
   const r = Math.max(4, p.radius);
-  ctx.save();
-  ctx.translate(p.x, p.y);
-  ctx.rotate(ang);
-  // asta
-  ctx.strokeStyle = p.color;
-  ctx.lineWidth = Math.max(1.5, r * 0.45);
-  ctx.lineCap = "round";
-  ctx.beginPath();
-  ctx.moveTo(-r * 3.0, 0);
-  ctx.lineTo(r * 1.8, 0);
-  ctx.stroke();
-  // punta
-  ctx.fillStyle = p.color;
-  ctx.beginPath();
-  ctx.moveTo(r * 3.2, 0);
-  ctx.lineTo(r * 1.5, r * 0.65);
-  ctx.lineTo(r * 1.5, -r * 0.65);
-  ctx.closePath();
-  ctx.fill();
-  // plumas: vértice hacia la punta, brazos hacia la cola (misma orientación que la punta)
-  ctx.strokeStyle = "rgba(255,255,255,0.8)";
-  ctx.lineWidth = Math.max(1.8, r * 0.4);
-  ctx.lineJoin = "round";
-  ctx.beginPath();
-  // fila delantera
-  ctx.moveTo(-r * 2.3, -r * 0.85);
-  ctx.lineTo(-r * 1.6, 0);
-  ctx.lineTo(-r * 2.3, r * 0.85);
-  // fila trasera
-  ctx.moveTo(-r * 3.0, -r * 0.85);
-  ctx.lineTo(-r * 2.3, 0);
-  ctx.lineTo(-r * 3.0, r * 0.85);
-  ctx.stroke();
-  ctx.restore();
+  const ang = Math.atan2(p.vy, p.vx);
+  if (!RS._spriteReady(img)) {
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(ang);
+    ctx.fillStyle = p.color || "#e8eef8";
+    ctx.beginPath();
+    ctx.moveTo(r * 3.2, 0);
+    ctx.lineTo(-r * 2.5, r * 0.7);
+    ctx.lineTo(-r * 2.5, -r * 0.7);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+    return;
+  }
+  const scale = (r * 7) / img.naturalWidth;
+  RS._blitFacingTrail(
+    ctx,
+    img,
+    p.x,
+    p.y,
+    p.vx,
+    p.vy,
+    img.naturalWidth * scale,
+    img.naturalHeight * scale,
+    ang
+  );
 };
 
-/**
- * Hechizo del tomo: sheet 4 frames horizontales (punta →), rota a la velocidad + ghost.
- */
+/** Hechizo del tomo: sheet 4 frames horizontales (punta →) + ghost. */
 RS.drawSpellOrb = (ctx, p) => {
-  const img = RS.sprite("icons/projectiles/orb.png");
+  const img = RS.sprite(p.sprite);
   const r = p.radius;
-  if (!img.complete || !img.naturalWidth) {
+  if (!RS._spriteReady(img)) {
     ctx.beginPath();
     ctx.arc(p.x, p.y, r + 5, 0, Math.PI * 2);
     ctx.fillStyle = "rgba(199, 125, 255, 0.22)";
@@ -205,27 +220,10 @@ RS.drawSpellOrb = (ctx, p) => {
     ctx.fill();
     return;
   }
-  const frames = 4;
-  const fw = Math.floor(img.naturalWidth / frames);
-  const fh = img.naturalHeight;
-  const fi = Math.floor(performance.now() / 80) % frames;
+  const { fw, fh, sx } = RS._sheetFrame(img, 4);
   const scale = (r * 4) / fw;
   const dw = fw * scale;
   const dh = fh * scale;
   const ang = Math.atan2(p.vy, p.vx);
-  const speed = Math.hypot(p.vx, p.vy) || 1;
-  const gx = p.x - (p.vx / speed) * dw * 0.3;
-  const gy = p.y - (p.vy / speed) * dw * 0.3;
-
-  const blit = (x, y, alpha) => {
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.imageSmoothingEnabled = false;
-    ctx.translate(x, y);
-    ctx.rotate(ang);
-    ctx.drawImage(img, fi * fw, 0, fw, fh, -dw / 2, -dh / 2, dw, dh);
-    ctx.restore();
-  };
-  blit(gx, gy, 0.35);
-  blit(p.x, p.y, 1);
+  RS._blitFacingTrail(ctx, img, p.x, p.y, p.vx, p.vy, dw, dh, ang, sx, 0, fw, fh);
 };

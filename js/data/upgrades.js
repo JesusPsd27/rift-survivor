@@ -48,9 +48,9 @@ RS.UPGRADES = [
   {
     id: "regen",
     name: "Regeneración",
-    desc: "+1.5 HP/s",
+    desc: "+0.5 HP/s",
     color: "#4ade80",
-    perLevel: 1.5,
+    perLevel: 0.5,
     unit: "regen",
   },
   {

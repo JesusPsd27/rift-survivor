@@ -15,7 +15,8 @@ RS.Combat = {
   },
 
   hurtEnemy(state, e, dmg) {
-    const dealt = Math.max(1, Math.round(dmg));
+    const resist = e.armor || 0;
+    const dealt = Math.max(1, Math.round(dmg * (1 - resist)));
     e.hp -= dealt;
     e.hitFlash = 0.08;
     RS.spawnFloater(state, e.x, e.y - e.radius, dealt, "#ffd27a");

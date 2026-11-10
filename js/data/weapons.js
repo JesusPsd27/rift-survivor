@@ -6,24 +6,11 @@ RS.MAX_PASSIVES = 4;
 RS.MAX_LEVEL = 5;
 
 /**
- * Tipos de arma (comportamiento en systems/weapons.js).
- * - projectile: bala hacia el enemigo
- * - aura: daño en radio alrededor
- * - orb: proyectil que va y vuelve
- * - orbital: orbes que giran alrededor del jugador
- * - melee: tajo en cono hacia donde miras
- */
-RS.WEAPON_TYPES = {
-  projectile: { id: "projectile", label: "Proyectil" },
-  aura: { id: "aura", label: "Aura" },
-  orb: { id: "orb", label: "Orbe (boomerang)" },
-  orbital: { id: "orbital", label: "Orbital" },
-  melee: { id: "melee", label: "Melee" },
-};
-
-/**
  * Armas base + evoluciones (ítems LoL como referencia; no assets oficiales).
+ * Tipos (comportamiento en systems/weapons.js):
+ *   projectile | aura | orb | orbital | melee
  * evolvedOnly: no sale como arma nueva en level-up (solo por evolución).
+ * projectileSprite: PNG / sheet en icons/projectiles/.
  */
 RS.WEAPONS = [
   // —— Bases ——
@@ -33,7 +20,7 @@ RS.WEAPONS = [
     desc: "Dispara flechas al enemigo más cercano",
     type: "projectile",
     color: "#c4a574",
-    maxLevel: RS.MAX_LEVEL,
+    projectileSprite: "icons/projectiles/arrow_gray.png",
     base: {
       damage: 12,
       cooldown: 0.55,
@@ -49,7 +36,7 @@ RS.WEAPONS = [
     desc: "Aura de inmolación a tu alrededor",
     type: "aura",
     color: "#ff8c42",
-    maxLevel: RS.MAX_LEVEL,
+    projectileSprite: "icons/projectiles/aura_red3.png",
     base: {
       damage: 8,
       cooldown: 0.35,
@@ -62,7 +49,7 @@ RS.WEAPONS = [
     desc: "Lanza un hechizo que va y vuelve",
     type: "orb",
     color: "#a78bfa",
-    maxLevel: RS.MAX_LEVEL,
+    projectileSprite: "icons/projectiles/orb_blue.png",
     base: {
       damage: 16,
       cooldown: 1.05,
@@ -78,7 +65,7 @@ RS.WEAPONS = [
     desc: "Tajo hacia el enemigo más cercano",
     type: "melee",
     color: "#d4dce8",
-    maxLevel: RS.MAX_LEVEL,
+    projectileSprite: "icons/projectiles/slash_silver.png",
     base: {
       damage: 22,
       cooldown: 0.7,
@@ -92,7 +79,7 @@ RS.WEAPONS = [
     desc: "Espíritus que orbitan y dañan al tocar",
     type: "orbital",
     color: "#7dd3fc",
-    maxLevel: RS.MAX_LEVEL,
+    projectileSprite: "icons/projectiles/flame_blue.png",
     base: {
       damage: 10,
       cooldown: 0.45,
@@ -111,9 +98,9 @@ RS.WEAPONS = [
     type: "projectile",
     color: "#38bdf8",
     evolvedOnly: true,
-    maxLevel: RS.MAX_LEVEL,
+    projectileSprite: "icons/projectiles/arrow_gold.png",
     base: {
-      damage: 20,
+      damage: 16,
       cooldown: 0.42,
       range: 460,
       projectileSpeed: 600,
@@ -128,7 +115,7 @@ RS.WEAPONS = [
     type: "aura",
     color: "#f97316",
     evolvedOnly: true,
-    maxLevel: RS.MAX_LEVEL,
+    projectileSprite: "icons/projectiles/aura_red.png",
     base: {
       damage: 14,
       cooldown: 0.28,
@@ -142,9 +129,9 @@ RS.WEAPONS = [
     type: "orb",
     color: "#e879f9",
     evolvedOnly: true,
-    maxLevel: RS.MAX_LEVEL,
+    projectileSprite: "icons/projectiles/orb_gold.png",
     base: {
-      damage: 26,
+      damage: 20,
       cooldown: 0.85,
       range: 400,
       projectileSpeed: 440,
@@ -159,7 +146,7 @@ RS.WEAPONS = [
     type: "melee",
     color: "#fbbf24",
     evolvedOnly: true,
-    maxLevel: RS.MAX_LEVEL,
+    projectileSprite: "icons/projectiles/slash_gold.png",
     base: {
       damage: 36,
       cooldown: 0.55,
@@ -174,7 +161,7 @@ RS.WEAPONS = [
     type: "orbital",
     color: "#faaf24",
     evolvedOnly: true,
-    maxLevel: RS.MAX_LEVEL,
+    projectileSprite: "icons/projectiles/flame_red.png",
     base: {
       damage: 16,
       cooldown: 0.35,
@@ -185,5 +172,7 @@ RS.WEAPONS = [
     },
   },
 ];
+
+for (const w of RS.WEAPONS) w.maxLevel ??= RS.MAX_LEVEL;
 
 RS.weaponById = (id) => RS.WEAPONS.find((w) => w.id === id);

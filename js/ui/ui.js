@@ -41,7 +41,10 @@ RS.UI = {
       btnSettingsBack: document.getElementById("btn-settings-back"),
       btnCreditsBack: document.getElementById("btn-credits-back"),
       statsChampion: document.getElementById("stats-champion"),
+      statsChampPills: document.getElementById("stats-champ-pills"),
+      statsHero: document.getElementById("stats-hero"),
       statsSummary: document.getElementById("stats-summary"),
+      statsSortTabs: document.getElementById("stats-sort-tabs"),
       statsTimes: document.getElementById("stats-times"),
       btnMetaBack: document.getElementById("btn-meta-back"),
       btnMetaRefund: document.getElementById("btn-meta-refund"),
@@ -62,6 +65,7 @@ RS.UI = {
       xpFill: document.getElementById("xp-fill"),
       hpText: document.getElementById("hp-text"),
       xpText: document.getElementById("xp-text"),
+      pauseMeta: document.getElementById("pause-meta"),
       pauseStatsBase: document.getElementById("pause-stats-base"),
       pauseStatsWeapons: document.getElementById("pause-stats-weapons"),
       pauseStatsMejoras: document.getElementById("pause-stats-mejoras"),
@@ -96,7 +100,19 @@ RS.UI = {
     for (const input of this.els.vols) this._bindVolume(input);
     this.els.btnFullscreen.addEventListener("click", () => this.toggleFullscreen());
     document.addEventListener("fullscreenchange", () => this.syncFullscreen());
-    this.els.statsChampion.addEventListener("change", () => this.renderStats());
+    this._statsSort = "time";
+    this.els.statsChampPills.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-champ]");
+      if (!btn) return;
+      this.els.statsChampion.value = btn.dataset.champ;
+      this.renderStats();
+    });
+    this.els.statsSortTabs.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-sort]");
+      if (!btn) return;
+      this._statsSort = btn.dataset.sort;
+      this.renderStats();
+    });
     this.els.btnMetaBack.addEventListener("click", () => {
       this.refreshGold();
       this.show("menu");
@@ -229,21 +245,37 @@ RS.UI = {
   },
 
   _fillStatsFilter() {
-    const sel = this.els.statsChampion;
-    const all = document.createElement("option");
-    all.value = "";
-    all.textContent = "Todos";
-    sel.appendChild(all);
-    for (const c of RS.CHAMPIONS) {
-      const opt = document.createElement("option");
-      opt.value = c.id;
-      opt.textContent = c.name;
-      sel.appendChild(opt);
-    }
+    // pills se redibujan en renderStats; el hidden input guarda el filtro
+    this.els.statsChampion.value = "";
   },
 
   _champName(id) {
     return RS.CHAMPIONS.find((c) => c.id === id)?.name || id || "—";
+  },
+
+  _champColor(id) {
+    return RS.CHAMPIONS.find((c) => c.id === id)?.color || "#8b9bb4";
+  },
+
+  _champAvatar(id, sizeClass = "") {
+    const name = this._champName(id);
+    const initial = (name || "?").charAt(0).toUpperCase();
+    const color = this._champColor(id);
+    return `<span class="stats-avatar ${sizeClass}" style="--champ:${color}" title="${name}">${initial}</span>`;
+  },
+
+  _statsIcon(kind) {
+    const common = `class="stats-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"`;
+    const paths = {
+      swords: `<path d="M14.5 17.5 3 6V3h3l11.5 11.5"/><path d="m13 19 6-6"/><path d="m16 16 4 4"/><path d="m9.5 6.5 8-3.5L21 6l-3.5 8"/><path d="m14.5 14.5 6 6"/>`,
+      clock: `<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>`,
+      hourglass: `<path d="M6 3h12"/><path d="M6 21h12"/><path d="M8 3c0 5 2.5 6.5 4 8 1.5 1.5 4 3 4 8"/><path d="M16 3c0 5-2.5 6.5-4 8-1.5 1.5-4 3-4 8"/>`,
+      star: `<path d="m12 3 2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 15.9 7.2 18l.9-5.4L4.2 8.7l5.4-.8z"/>`,
+      skull: `<path d="M12 3c-4.4 0-8 3.1-8 7.5 0 2.6 1.3 4.6 3.2 5.8V19h9.6v-2.7c1.9-1.2 3.2-3.2 3.2-5.8C20 6.1 16.4 3 12 3z"/><circle cx="9" cy="10" r="1.2" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="1.2" fill="currentColor" stroke="none"/>`,
+      coin: `<circle cx="12" cy="12" r="8"/><path d="M12 7v10M9.5 9.5h3.2a1.6 1.6 0 0 1 0 3.2H9.8a1.6 1.6 0 0 0 0 3.2H14"/>`,
+      chart: `<path d="M4 19h16"/><path d="M7 16v-5"/><path d="M12 16V8"/><path d="M17 16v-8"/>`,
+    };
+    return `<svg ${common}>${paths[kind] || paths.star}</svg>`;
   },
 
   showStats() {
@@ -253,38 +285,138 @@ RS.UI = {
 
   renderStats() {
     const id = this.els.statsChampion.value || null;
-    const s = RS.Save.summarize(RS.Save.load().runs, id);
+    const s = RS.Save.summarize(RS.Save.load().runs, id || null);
     const winRate = s.runs ? Math.round((s.wins / s.runs) * 100) : 0;
-    const cells = [
-      ["Partidas", s.runs],
-      ["Victorias", s.wins],
-      ["Derrotas", s.losses],
-      ["% victoria", `${winRate}%`],
-      ["Kills", s.kills],
-      ["Tiempo jugado", RS.formatTime(s.time)],
-      ["Mejor tiempo", RS.formatTime(s.bestTime)],
-      ["Mejor kills", s.bestKills],
-      ["Nivel máximo", s.bestLevel],
-      ["Oro ganado", s.gold],
-    ];
-    this.els.statsSummary.innerHTML = cells
-      .map(([label, value]) => `<div class="stats-cell"><span>${label}</span><strong>${value}</strong></div>`)
-      .join("");
+    const avgTime = s.runs ? s.time / s.runs : 0;
+    const kpm = s.time > 0 ? (s.kills / s.time) * 60 : 0;
+    const goldAvg = s.runs ? Math.round(s.gold / s.runs) : 0;
 
-    if (!s.top.length) {
+    this._renderStatsPills(id);
+    this._renderStatsSortTabs();
+
+    const ring = Math.max(0, Math.min(100, winRate));
+    this.els.statsHero.innerHTML = `
+      <div class="stats-records-panel">
+        <div class="stats-ring">
+          <svg viewBox="0 0 36 36" aria-hidden="true">
+            <circle class="stats-ring-track" cx="18" cy="18" r="15.5" />
+            <circle class="stats-ring-fill" cx="18" cy="18" r="15.5"
+              stroke-dasharray="${ring} ${100 - ring}" />
+          </svg>
+          <div class="stats-ring-label">
+            <strong>${winRate}%</strong>
+            <span>victoria</span>
+          </div>
+          <div class="stats-ring-sub">${s.wins} V · ${s.losses} D</div>
+        </div>
+        <div class="stats-records">
+          <div class="stats-record">
+            ${this._statsIcon("clock")}
+            <span class="stats-record-label">Mejor tiempo</span>
+            <strong>${RS.formatTime(s.bestTime)}</strong>
+            <em>${s.bestTimeChamp ? this._champName(s.bestTimeChamp) : "—"}</em>
+          </div>
+          <div class="stats-record">
+            ${this._statsIcon("swords")}
+            <span class="stats-record-label">Mejor kills</span>
+            <strong>${s.bestKills}</strong>
+            <em>${s.bestKillsChamp ? this._champName(s.bestKillsChamp) : "—"}</em>
+          </div>
+          <div class="stats-record">
+            ${this._statsIcon("star")}
+            <span class="stats-record-label">Nivel máximo</span>
+            <strong>${s.bestLevel || 0}</strong>
+            <em>${s.bestLevelChamp ? this._champName(s.bestLevelChamp) : "—"}</em>
+          </div>
+        </div>
+      </div>`;
+
+    this.els.statsSummary.innerHTML = `
+      <div class="stats-strip-item">
+        ${this._statsIcon("swords")}
+        <div>
+          <span>Partidas</span>
+          <strong>${s.runs}</strong>
+          <em>${s.wins} ganada${s.wins === 1 ? "" : "s"} · ${s.losses} perdida${s.losses === 1 ? "" : "s"}</em>
+        </div>
+      </div>
+      <div class="stats-strip-item">
+        ${this._statsIcon("hourglass")}
+        <div>
+          <span>Tiempo jugado</span>
+          <strong>${RS.formatTime(s.time)}</strong>
+          <em>${s.runs ? `≈ ${RS.formatTime(avgTime)} / partida` : "—"}</em>
+        </div>
+      </div>
+      <div class="stats-strip-item">
+        ${this._statsIcon("skull")}
+        <div>
+          <span>Kills</span>
+          <strong>${s.kills}</strong>
+          <em>${s.time ? `≈ ${kpm.toFixed(1)} / min` : "—"}</em>
+        </div>
+      </div>
+      <div class="stats-strip-item">
+        ${this._statsIcon("coin")}
+        <div>
+          <span>Oro ganado</span>
+          <strong>${s.gold}</strong>
+          <em>${s.runs ? `≈ ${goldAvg} / partida` : "—"}</em>
+        </div>
+      </div>`;
+
+    const top = RS.Save.rankRuns(s.list, this._statsSort || "time", 5);
+    if (!top.length) {
       this.els.statsTimes.innerHTML = `<div class="stats-empty">Sin partidas todavía</div>`;
       return;
     }
-    this.els.statsTimes.innerHTML = s.top
+    this.els.statsTimes.innerHTML = top
       .map((r, i) => {
-        const result = r.won ? "Victoria" : "Derrota";
+        const medal = i < 3 ? ` medal-${i + 1}` : "";
+        const badge = r.won
+          ? `<span class="stats-badge win">Victoria</span>`
+          : `<span class="stats-badge loss">Derrota</span>`;
         return `<div class="stats-time">
-          <span class="rank">${i + 1}</span>
-          <span>${this._champName(r.championId)}</span>
+          <span class="rank${medal}">${i + 1}</span>
+          ${this._champAvatar(r.championId)}
+          <span class="stats-time-name">${this._champName(r.championId)}</span>
           <span class="when">${RS.formatTime(r.time)}</span>
-          <span>${r.kills} kills · ${result}</span>
+          <span class="stats-time-kills">${this._statsIcon("swords")} ${r.kills}</span>
+          ${badge}
         </div>`;
       })
+      .join("");
+  },
+
+  _renderStatsPills(activeId) {
+    const cur = activeId || "";
+    const pills = [
+      { id: "", name: "Todos", color: null },
+      ...RS.CHAMPIONS.map((c) => ({ id: c.id, name: c.name, color: c.color })),
+    ];
+    this.els.statsChampPills.innerHTML = pills
+      .map((p) => {
+        const on = p.id === cur ? " on" : "";
+        const av = p.id
+          ? this._champAvatar(p.id, "sm")
+          : `<span class="stats-avatar sm all" aria-hidden="true">◈</span>`;
+        return `<button type="button" class="stats-pill${on}" data-champ="${p.id}">${av}<span>${p.name}</span></button>`;
+      })
+      .join("");
+  },
+
+  _renderStatsSortTabs() {
+    const cur = this._statsSort || "time";
+    const tabs = [
+      { id: "time", label: "Tiempo" },
+      { id: "kills", label: "Kills" },
+      { id: "recent", label: "Recientes" },
+    ];
+    this.els.statsSortTabs.innerHTML = tabs
+      .map(
+        (t) =>
+          `<button type="button" class="stats-sort-tab${t.id === cur ? " on" : ""}" data-sort="${t.id}">${t.label}</button>`
+      )
       .join("");
   },
 
@@ -312,10 +444,12 @@ RS.UI = {
 
       card.innerHTML = `
         <span class="meta-card-name">${def.name}</span>
-        <span class="meta-card-gain">${this._gain(def)}</span>
+        <span class="meta-card-gain">${maxed ? "Nivel máximo" : this._gain(def)}</span>
         <div class="meta-card-icon">${this._glyph(def.id)}</div>
-        <div class="meta-pips">${pips}</div>
-        <span class="meta-card-rank">${rank}/${def.maxRank}</span>
+        <div class="meta-card-progress">
+          <div class="meta-pips">${pips}</div>
+          <span class="meta-card-rank">${rank}/${def.maxRank}</span>
+        </div>
         <button type="button" class="meta-buy" aria-label="${buyLabel}" ${maxed || gold < cost ? "disabled" : ""}>${buyInner}</button>`;
 
       card.querySelector(".meta-buy").addEventListener("click", () => this.buyMeta(def.id));
@@ -422,7 +556,8 @@ RS.UI = {
       }
     }
     const inRun = this.game.mode !== "menu";
-    const hideHud = screen === "over" || (menuScreen && !inRun);
+    const hideHud =
+      screen === "over" || screen === "pause" || (menuScreen && !inRun);
     this.els.hud.classList.toggle("hidden", hideHud);
     this.els.loadout.classList.toggle("hidden", hideHud);
     this.els.overlay.style.pointerEvents = screen ? "auto" : "none";
@@ -453,11 +588,13 @@ RS.UI = {
   },
 
   showPause(state) {
-    this.renderPauseStats(state.player);
+    const p = state.player;
+    this.els.pauseMeta.textContent = `${p.name} · Nv ${p.level} · ${RS.formatTime(state.time)} · ${state.kills} kills`;
+    this.renderPauseStats(p);
     this.show("pause");
   },
 
-  // Icono por convención: icons/weapons/<id>.svg (armas) o icons/stats/<id>.svg (stats).
+  // Icono: weapons/<id>.png (armas) o stats/<id>.svg (stats).
   // Evoluciones sin icono propio reutilizan el de su arma base; si falta el archivo, glifo genérico.
   _glyph(kind) {
     const box = (inner) =>
@@ -471,16 +608,18 @@ RS.UI = {
       );
     }
     let path;
+    let ext = "svg";
     if (RS.weaponById(kind)) {
       const evo = RS.EVOLUTIONS.find((e) => e.resultWeapon === kind);
       path = `weapons/${evo ? evo.fromWeapon : kind}`;
+      ext = "png";
     } else if (RS.UPGRADES.some((u) => u.id === kind)) {
       path = `stats/${kind}`;
     } else {
       return star;
     }
     this._starHtml = star;
-    return `<img class="pixel" src="icons/${path}.svg" alt="" onerror="RS.UI._iconFallback(this)">`;
+    return `<img class="pixel" src="icons/${path}.${ext}" alt="" onerror="RS.UI._iconFallback(this)">`;
   },
 
   _iconFallback(img) {

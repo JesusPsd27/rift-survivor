@@ -38,10 +38,10 @@ RS.META_UPGRADES = [
   {
     id: "regen",
     name: "Regeneración",
-    desc: "+0.4 HP/s por rango (máx +2)",
+    desc: "+0.25 HP/s por rango (máx +1.25)",
     color: "#4ade80",
     maxRank: 5,
-    perRank: 0.4,
+    perRank: 0.25,
     unit: "regen",
     baseCost: 110,
   },
